@@ -242,7 +242,7 @@ def style_fig(fig, height=300, legend=False, axes=True):
 
 def risk_meter(value):
     pct = max(0.0, min(1.0, value)) * 100
-    color = PINK if value >= 0.60 else ("#ff8a3d" if value >= 0.30 else "#7b7880")
+    color = PINK if value >= 0.25 else ("#ff8a3d" if value >= 0.10 else "#7b7880")
     st.markdown(
         f'<div class="pl-meter"><div class="pl-meter-fill" style="width:{pct:.1f}%;background:{color}"></div></div>',
         unsafe_allow_html=True,
@@ -325,7 +325,7 @@ def train_fraud_model(data: pd.DataFrame):
         n_estimators=120,
         max_depth=10,
         min_samples_leaf=3,
-        class_weight="balanced_subsample",
+        class_weight={0: 1, 1: 5},
         random_state=42,
         n_jobs=-1,
     )
@@ -357,7 +357,7 @@ def train_fraud_model(data: pd.DataFrame):
     scored.loc[test_idx, "score_provenance"] = "Held-out score (out-of-sample)"
     scored["risk_band"] = pd.cut(
         scored["predicted_fraud_risk"],
-        bins=[-0.001, 0.30, 0.60, 1.0],
+        bins=[-0.001, 0.10, 0.25, 1.0],
         labels=["Low", "Medium", "High"],
     ).astype(str)
     importance = (
@@ -510,7 +510,7 @@ if page == "Overview":
             highest_category = category_volume.iloc[0]
             st.markdown(
                 '<div class="pl-row"><div><div class="pl-row-k">High-risk model flags</div>'
-                '<div class="pl-row-s">Transactions with model scores above 60%</div></div>'
+                '<div class="pl-row-s">Transactions with model scores above 25%</div></div>'
                 f'<div class="pl-row-v">{high_risk_count:,}</div></div>'
                 '<div class="pl-row"><div><div class="pl-row-k">Largest market</div>'
                 f'<div class="pl-row-s">₹{largest_region["amount"]:,.0f} in transaction value</div></div>'
@@ -774,7 +774,7 @@ if page == "Fraud Intelligence":
 
     with st.container(border=True):
         panel_header("Threshold analysis", "Classification threshold on the held-out test set", "⚑")
-        threshold = st.slider("Fraud alert threshold", min_value=0.05, max_value=0.95, value=0.50, step=0.05)
+        threshold = st.slider("Fraud alert threshold", min_value=0.05, max_value=0.95, value=0.15, step=0.05)
         test_labels = model_metrics["test_labels"]
         test_probabilities = model_metrics["test_probabilities"]
         threshold_predictions = (test_probabilities >= threshold).astype(int)
@@ -858,6 +858,7 @@ if page == "Fraud Intelligence":
         display_cols = ["transaction_id", "timestamp", "customer_id", "merchant_id", "amount", "region", "category", "predicted_fraud_risk", "risk_band", "score_provenance", "is_fraud"]
         st.dataframe(high_risk[display_cols].head(100), use_container_width=True, hide_index=True)
         st.caption("Ground-truth labels are synthetic. Use score_provenance to distinguish in-sample from genuinely held-out predictions.")
+        st.caption("Low: <10%, Medium: 10–25%, High: >25%. These are illustrative prioritization bands, not validated operational thresholds.")
 
 
 # ---------- Merchant Risk ----------
