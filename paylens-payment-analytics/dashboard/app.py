@@ -218,9 +218,9 @@ with tab_overview:
     chart_left, chart_right = st.columns([1.7, 1], gap="medium")
     with chart_left:
         st.markdown("#### Payment activity")
-        trend_metric = st.segmented_control(
+        trend_metric = st.radio(
             "View by", ["Transaction volume", "Transaction value"],
-            default="Transaction volume", key="overview_trend",
+            horizontal=True, key="overview_trend",
         )
         trend_column = "transaction_count" if trend_metric == "Transaction volume" else "transaction_value"
         trend_title = "Daily transactions" if trend_metric == "Transaction volume" else "Daily value (₹)"
