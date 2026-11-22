@@ -24,28 +24,29 @@ px.defaults.color_discrete_sequence = ["#FF813F", "#F17C9B", "#E6B05D", "#A38BDB
 
 st.markdown("""
 <style>
-/* PayLens / graphite + warm ambient lighting */
-.stApp {background:radial-gradient(ellipse 65% 40% at 92% -9%,rgba(225,105,52,.105),transparent 75%),#101113;color:#f3f3f4;}
-.block-container {max-width:1530px;padding:1.65rem 2.1rem 3rem;}
-[data-testid="stSidebar"] {background:linear-gradient(160deg,#191a1d,#111214 80%);border-right:1px solid #343438;}
-[data-testid="stSidebar"] .block-container {padding:1.4rem 1rem;}
-[data-testid="stMetric"] {background:linear-gradient(145deg,#29292c,#1b1b1e 70%);border:1px solid #38383c;border-radius:17px;padding:19px;box-shadow:inset 0 1px 0 #ffffff0c,0 14px 35px #00000025;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;}
-[data-testid="stMetric"]:hover {transform:translateY(-3px);border-color:#765144;box-shadow:0 16px 40px #00000055;}
-[data-testid="stMetricLabel"] {color:#bdbdc2;}
-[data-testid="stMetricValue"] {color:#fafafa;font-weight:620;letter-spacing:-.045em;}
-.stTabs [data-baseweb="tab-list"] {gap:7px;flex-wrap:wrap;border-bottom:1px solid #343438;padding-bottom:8px;}
-.stTabs [data-baseweb="tab"] {background:#222225;border:1px solid #343438;border-radius:10px;padding:10px 15px;color:#bdbdc2;transition:background .18s ease,color .18s ease;}
-.stTabs [data-baseweb="tab"]:hover {background:#343035;color:white;}
-.stTabs [aria-selected="true"] {background:#3b2a25;color:#ffac7d;border-color:#75442e;}
-h1,h2,h3 {letter-spacing:-.04em;}
-h1 {font-weight:720;}
-[data-testid="stAlert"] {border-radius:13px;}
-[data-testid="stPlotlyChart"] {background:linear-gradient(135deg,#252527,#1b1b1e);border:1px solid #38383b;border-radius:16px;overflow:hidden;box-shadow:inset 0 1px 0 #ffffff09;}
-div.stButton button,div.stDownloadButton button {border-radius:10px;transition:transform .18s ease,border-color .18s ease;}
-div.stButton button:hover,div.stDownloadButton button:hover {transform:translateY(-1px);border-color:#f77c43;}
-[data-testid="stDataFrame"] {border-radius:12px;overflow:hidden;}
-@media(max-width:850px){.block-container{padding:1rem .85rem 2rem;}[data-testid="stMetric"]{padding:12px;}.stTabs [data-baseweb="tab"]{padding:8px 10px;}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;}}
+:root{--orange:#ff762f;--pink:#f26489;--panel:#202023;--line:#39383b}
+.stApp{background:radial-gradient(ellipse 55% 28% at 80% -4%,rgba(255,110,40,.16),transparent 80%),radial-gradient(ellipse 35% 25% at 14% 98%,rgba(221,72,37,.075),transparent 80%),#111113;color:#f4f3f3}
+.block-container{max-width:1580px;padding:1.25rem 2rem 3rem}
+[data-testid="stSidebar"]{background:linear-gradient(160deg,#1b1b1e,#111113 82%);border-right:1px solid #363538}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.65rem}
+[data-testid="stMetric"]{background:radial-gradient(ellipse at 15% 0%,#343032 0%,transparent 70%),linear-gradient(145deg,#262629,#1b1b1e);border:1px solid #414044;border-radius:17px;padding:20px;min-height:116px;box-shadow:inset 0 1px 0 #ffffff13,0 10px 28px #0005;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+[data-testid="stMetric"]:hover{transform:translateY(-3px);border-color:#9d5537;box-shadow:0 12px 30px #0007,0 0 22px #ff762f14}
+[data-testid="stMetricLabel"]{color:#bdbcc0;font-size:.85rem}
+[data-testid="stMetricValue"]{color:#faf9f8;letter-spacing:-.04em;font-weight:680}
+.stTabs [data-baseweb="tab-list"]{gap:5px;flex-wrap:wrap;border-bottom:1px solid #343438;padding-bottom:10px}
+.stTabs [data-baseweb="tab"]{background:#242326;border:1px solid #3b393c;border-radius:10px;padding:10px 15px;color:#c6c2c3;transition:all .17s ease}
+.stTabs [data-baseweb="tab"]:hover{background:#342a29;color:white}
+.stTabs [aria-selected="true"]{background:linear-gradient(90deg,#523128,#332526);color:#ffad79;border-color:#94553a}
+h1,h2,h3{letter-spacing:-.04em}h1{font-weight:740}
+[data-testid="stPlotlyChart"]{background:linear-gradient(140deg,#27272a,#1c1c1f);border:1px solid #3c3b3f;border-radius:17px;overflow:hidden;box-shadow:inset 0 1px 0 #ffffff0d,0 10px 25px #0003}
+[data-testid="stDataFrame"]{border:1px solid #373639;border-radius:12px;overflow:hidden}
+[data-testid="stVerticalBlockBorderWrapper"]{background:linear-gradient(145deg,#28282b,#1c1c1f);border:1px solid #424044!important;border-radius:17px!important;box-shadow:inset 0 1px 0 #ffffff0b,0 12px 32px #0004}
+[data-testid="stAlert"]{border-radius:12px}
+div.stButton button,div.stDownloadButton button{border-radius:10px;transition:transform .18s ease,border-color .18s ease}
+div.stButton button:hover,div.stDownloadButton button:hover{transform:translateY(-1px);border-color:#ff762f}
+div[data-baseweb="select"]>div{border-radius:10px}
+@media(max-width:850px){.block-container{padding:1rem .75rem 2rem}[data-testid="stMetric"]{padding:12px;min-height:95px}.stTabs [data-baseweb="tab"]{padding:8px 10px}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -54,7 +55,8 @@ DATA_FILE = PROJECT_ROOT / "data" / "payments.csv"
 GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
 
 st.title("PayLens")
-st.caption("Payment intelligence, without the noise.  ·  Synthetic demo environment")
+st.caption("Payment intelligence  /  Fraud analytics  /  Merchant performance")
+
 
 
 REQUIRED_COLUMNS = {
@@ -153,7 +155,7 @@ df = load_data(str(DATA_FILE), file_modified)
 scored_df, model_metrics, feature_importance = train_fraud_model(df)
 
 with st.sidebar:
-    st.markdown("### ◈ PayLens")
+    st.markdown("### 🟠 PayLens")
     st.caption("INTELLIGENCE WORKSPACE")
     st.divider()
     st.header("Filters")
@@ -215,44 +217,99 @@ with tab_overview:
     ).reset_index()
     region_value = filtered.groupby("region", as_index=False)["amount"].sum().sort_values("amount", ascending=False)
     category_volume = filtered.groupby("category", as_index=False).size().sort_values("size", ascending=False)
-    chart_left, chart_right = st.columns([1.7, 1], gap="medium")
+    chart_left, chart_right = st.columns([1.55, 1], gap="medium")
     with chart_left:
-        st.markdown("#### Payment activity")
-        trend_metric = st.radio(
-            "View by", ["Transaction volume", "Transaction value"],
-            horizontal=True, key="overview_trend",
-        )
-        trend_column = "transaction_count" if trend_metric == "Transaction volume" else "transaction_value"
-        trend_title = "Daily transactions" if trend_metric == "Transaction volume" else "Daily value (₹)"
-        trend_chart = px.area(daily, x="timestamp", y=trend_column, title=trend_title)
-        trend_chart.update_traces(line={"width": 2.8, "color": "#FF813F"}, fillcolor="rgba(255,129,63,0.15)")
-        trend_chart.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font={"color": "#d4d4d8"}, margin={"l": 12, "r": 12, "t": 46, "b": 12},
-            xaxis={"showgrid": False}, yaxis={"gridcolor": "#38383b"},
-        )
-        st.plotly_chart(trend_chart, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("#### Transaction trend")
+            st.caption("Daily payment activity across your selected period")
+            trend_metric = st.radio(
+                "Metric", ["Transaction volume", "Transaction value"],
+                horizontal=True, key="overview_trend",
+            )
+            trend_column = "transaction_count" if trend_metric == "Transaction volume" else "transaction_value"
+            trend_chart = px.area(daily, x="timestamp", y=trend_column)
+            trend_chart.update_traces(
+                line={"width": 3, "color": "#ff762f"},
+                fillcolor="rgba(255,118,47,.18)",
+                hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f}<extra></extra>",
+            )
+            trend_chart.update_layout(
+                height=310, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font={"color": "#d4d1d2"}, margin={"l": 5, "r": 8, "t": 10, "b": 4},
+                xaxis={"showgrid": False, "title": None},
+                yaxis={"gridcolor": "#383638", "title": None},
+                showlegend=False, hovermode="x unified",
+            )
+            st.plotly_chart(trend_chart, use_container_width=True)
     with chart_right:
-        st.markdown("#### Risk watch")
-        high_risk_count = int((filtered["risk_band"] == "High").sum())
-        st.metric("High-risk model flags", f"{high_risk_count:,}")
-        st.metric("Simulated fraud cases", f"{fraud_count:,}")
-        st.caption("Model flags and simulated fraud labels are different measures. They are not live alerts.")
-        st.markdown("**Priority observation**")
-        if high_risk_count:
-            st.write(f"{high_risk_count:,} filtered payments have model scores above 60%. Review them in Investigations.")
-        else:
-            st.write("No payments in the current selection exceed the high-risk band.")
-    st.markdown("#### Explore the network")
-    breakdown_left, breakdown_right = st.columns(2)
-    with breakdown_left:
-        region_chart = px.bar(region_value, x="region", y="amount", title="Value by region (₹)")
-        region_chart.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"color": "#d4d4d8"})
-        st.plotly_chart(region_chart, use_container_width=True)
-    with breakdown_right:
-        category_chart = px.bar(category_volume, x="category", y="size", title="Transactions by category")
-        category_chart.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font={"color": "#d4d4d8"})
-        st.plotly_chart(category_chart, use_container_width=True)
+        with st.container(border=True):
+            st.markdown("#### Intelligence brief")
+            st.caption("Observations generated from the filtered synthetic data")
+            high_risk_count = int((filtered["risk_band"] == "High").sum())
+            largest_region = region_value.iloc[0]
+            highest_category = category_volume.iloc[0]
+            st.markdown(f"**High-risk model flags** · {high_risk_count:,}")
+            st.caption("Transactions with model scores above 60%.")
+            st.divider()
+            st.markdown(f"**Largest market** · {largest_region['region']}")
+            st.caption(f"₹{largest_region['amount']:,.0f} in transaction value.")
+            st.divider()
+            st.markdown(f"**Most active category** · {highest_category['category']}")
+            st.caption(f"{int(highest_category['size']):,} payments in the selected period.")
+            st.divider()
+            st.caption("These are descriptive signals, not real-time alerts or AI-generated causal findings.")
+
+    bottom_left, bottom_right = st.columns([1, 1.55], gap="medium")
+    with bottom_left:
+        with st.container(border=True):
+            st.markdown("#### Risk distribution")
+            st.caption("Share of transactions by model risk band")
+            risk_counts = filtered["risk_band"].value_counts().reindex(
+                ["Low", "Medium", "High"], fill_value=0
+            )
+            risk_pie = px.pie(
+                names=risk_counts.index, values=risk_counts.values, hole=.68,
+                color=risk_counts.index,
+                color_discrete_map={"Low": "#57565d", "Medium": "#ff852f", "High": "#f05a82"},
+            )
+            risk_pie.update_traces(textinfo="percent", textposition="outside")
+            risk_pie.update_layout(
+                height=260, margin={"l": 5, "r": 5, "t": 0, "b": 0},
+                paper_bgcolor="rgba(0,0,0,0)", font={"color": "#f1eded"},
+                legend={"orientation": "h", "y": -.05},
+            )
+            st.plotly_chart(risk_pie, use_container_width=True)
+    with bottom_right:
+        with st.container(border=True):
+            st.markdown("#### Recent high-risk transactions")
+            st.caption("Investigate individual payments in the Investigations workspace")
+            recent_queue = filtered.sort_values(
+                ["predicted_fraud_risk", "timestamp"], ascending=False
+            ).head(7)
+            st.dataframe(
+                recent_queue[["transaction_id", "merchant_id", "amount", "predicted_fraud_risk"]],
+                hide_index=True, use_container_width=True,
+                column_config={
+                    "transaction_id": "Transaction",
+                    "merchant_id": "Merchant",
+                    "amount": st.column_config.NumberColumn("Amount", format="₹%.2f"),
+                    "predicted_fraud_risk": st.column_config.ProgressColumn(
+                        "Risk score", min_value=0, max_value=1, format="%.2f"
+                    ),
+                },
+            )
+            st.caption("Scores are illustrative; they include in-sample model predictions.")
+
+    with st.expander("Explore regional and category performance"):
+        breakdown_left, breakdown_right = st.columns(2)
+        with breakdown_left:
+            region_chart = px.bar(region_value, x="region", y="amount", title="Value by region (₹)")
+            region_chart.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(region_chart, use_container_width=True)
+        with breakdown_right:
+            category_chart = px.bar(category_volume, x="category", y="size", title="Transactions by category")
+            category_chart.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            st.plotly_chart(category_chart, use_container_width=True)
     st.markdown("#### What stands out")
     top_region = region_value.iloc[0]
     top_category = category_volume.iloc[0]
