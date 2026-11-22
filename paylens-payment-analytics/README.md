@@ -97,7 +97,7 @@ PayLens uses a **Random Forest classifier** trained on earlier synthetic transac
 
 The synthetic fraud label is sampled from an engineered process based on amount, merchant risk, night hours, unknown devices and card payments. The timestamp generator now produces hour and weekend fields from the timestamp itself; the dataset is versioned so older inconsistent samples are regenerated.
 
-**Evaluation:** The Fraud Intelligence page shows precision, recall, F1, ROC-AUC, average precision (AP), the fraud-prevalence/random-ranking AP baseline, Brier score and a threshold-adjustable confusion matrix on the chronological holdout. AP is especially useful for these imbalanced synthetic labels. Scores used for older records are marked **in-sample**; newer held-out predictions are marked **out-of-sample**.
+**Evaluation:** The Fraud Intelligence page shows precision, recall, F1, ROC-AUC, average precision (AP), the fraud-prevalence/random-ranking AP baseline, Brier score and a threshold-adjustable confusion matrix on the chronological holdout. It now also includes an **uncalibrated-score reliability diagram** and a held-out threshold-comparison table showing precision, recall, alert volume and false alerts. AP is especially useful for these imbalanced synthetic labels. Scores used for older records are marked **in-sample**; newer held-out predictions are marked **out-of-sample**.
 
 For this educational demo, Random Forest class weights are configured as `{0: 1, 1: 5}` rather than fully balancing the classes. The dashboard's illustrative review bands are **Low: under 10%**, **Medium: 10–25%** and **High: over 25%**. The scores have **not been calibrated or externally validated**; the bands are convenience categories, *not* deployable risk policies. Rule-based investigation cues are separate from the optional per-transaction **SHAP** chart. The SHAP bars explain contributions to this model score, not causality.
 
@@ -112,6 +112,19 @@ python -m unittest discover -s tests -v
 ```
 
 The tests regenerate the deterministic sample, check required columns, transaction IDs, binary fields, timestamp/hour/weekend consistency, dataset version and chronological split boundaries.
+
+## Live demo verification
+
+These are manual browser checks; passing Python unit tests alone does not prove the Streamlit Cloud interactions work.
+
+1. In **Investigations**, select a payment, expand **Explain this model prediction · SHAP**, and select **Calculate SHAP explanation**. The baseline plus contributions should reconstruct the model score.
+2. Change the case decision, enter a note and choose **Save case note**. Navigate away and back; the note should remain during the same Streamlit session.
+3. Select **Export session case notes** and verify the CSV has the transaction ID, status and note.
+4. In **Fraud Intelligence**, move the threshold slider and confirm precision, recall, false positives and missed cases change when classifications change.
+5. Check the model-reliability chart and threshold trade-off table; these describe uncalibrated model predictions.
+6. In **Merchant Risk**, choose a merchant and inspect the evidence-based business brief.
+
+Case notes are temporary per session and intentionally not a production data store. If any control fails, capture the visible error and check the Streamlit deployment logs.
 
 ## Future improvements
 
