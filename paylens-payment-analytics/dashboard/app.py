@@ -999,6 +999,33 @@ if page == "Merchant Risk":
             ("Payment success", f"{merchant_profile['payment_success_rate']:.1f}%", None),
         ], compact=True)
         risk_meter(float(merchant_profile["predicted_risk"]) / 100)
+        st.markdown("**Merchant decision brief**")
+        portfolio_success = 100 * float(filtered["success"].mean())
+        merchant_success = float(merchant_profile["payment_success_rate"])
+        merchant_value = float(merchant_profile["transaction_value"])
+        portfolio_value = float(filtered["amount"].sum())
+        merchant_share = 100 * merchant_value / portfolio_value if portfolio_value else 0
+        merchant_volume = int(merchant_profile["transactions"])
+        if merchant_volume < 10:
+            st.info(
+                f"This merchant has only {merchant_volume} transactions under the active filters. "
+                "Treat its observed rates as unstable; broaden the date range before prioritizing action."
+            )
+        elif merchant_success < portfolio_success - 5:
+            st.warning(
+                f"Payment success is {portfolio_success - merchant_success:.1f} percentage points "
+                "below the filtered portfolio. Review payment-method and device patterns "
+                "before drawing conclusions."
+            )
+        else:
+            st.success(
+                "The merchant's payment-success rate is not more than five percentage points "
+                "below the filtered portfolio. Continue routine monitoring."
+            )
+        st.caption(
+            f"Merchant share of filtered transaction value: {merchant_share:.1f}%. "
+            "These are descriptive observations on simulated data, not automated compliance decisions."
+        )
         profile_payments = filtered.loc[filtered["merchant_id"] == selected_merchant].sort_values(
             "timestamp", ascending=False
         )
