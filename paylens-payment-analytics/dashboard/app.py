@@ -53,6 +53,17 @@ h1,h2,h3,h4{letter-spacing:-.03em;color:var(--text)}
 [data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:#ffc5a4;font-weight:600}
 [data-testid="stSidebar"] [role="radiogroup"] [data-baseweb="radio"]>div:first-child{display:none}
 
+/* Horizontal navigation: intentional single-line workstation tabs */
+.st-key-paylens_page{margin:0 0 18px;padding:7px;border:1px solid #353137;border-radius:15px;background:linear-gradient(150deg,#1f1d21,#151519);box-shadow:inset 0 1px 0 #ffffff0c,0 10px 25px #0003;overflow-x:auto}
+.st-key-paylens_page [role="radiogroup"]{display:flex;flex-direction:row!important;flex-wrap:nowrap!important;gap:7px;width:max-content;min-width:100%}
+.st-key-paylens_page [role="radiogroup"] label{display:flex;align-items:center;justify-content:center;flex:1 0 auto;white-space:nowrap;padding:11px 15px;border:1px solid transparent;border-radius:10px;cursor:pointer;transition:background .18s ease,box-shadow .18s ease,border-color .18s ease}
+.st-key-paylens_page [role="radiogroup"] label:hover{background:#30272a;color:#fff}
+.st-key-paylens_page [role="radiogroup"] label:has(input:checked){background:linear-gradient(115deg,#623323,#342225);border-color:#82503a;box-shadow:inset 0 1px 0 #ffa56c29,0 0 16px #ff7a3d15}
+.st-key-paylens_page [role="radiogroup"] label p{font-size:.87rem;color:#c9c5cb}
+.st-key-paylens_page [role="radiogroup"] label:has(input:checked) p{color:#ffc9a7;font-weight:650}
+.st-key-paylens_page [role="radiogroup"] [data-baseweb="radio"]>div:first-child{display:none}
+@media(max-width:900px){.st-key-paylens_page [role="radiogroup"] label{padding:10px 11px}.st-key-paylens_page [role="radiogroup"] label p{font-size:.8rem}}
+
 /* Top bar */
 .pl-topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid #222228}
 .pl-page-title{font-size:1.65rem;font-weight:700;letter-spacing:-.035em;color:var(--text)}
@@ -331,14 +342,6 @@ with st.sidebar:
         '<div class="pl-brand-sub">Payment intelligence</div></div></div>',
         unsafe_allow_html=True,
     )
-    st.markdown('<div class="pl-nav-label">Workspace</div>', unsafe_allow_html=True)
-    page = st.radio(
-        "Workspace",
-        PAGES,
-        format_func=lambda name: f"{PAGE_ICONS[name]}   {name}",
-        label_visibility="collapsed",
-        key="paylens_page",
-    )
     st.markdown('<div class="pl-nav-label">Filters</div>', unsafe_allow_html=True)
     with st.expander("Refine your view", expanded=False):
         selected_regions = st.multiselect("Region", sorted(df["region"].unique()), default=sorted(df["region"].unique()))
@@ -373,6 +376,17 @@ filtered = scored_df[
 if filtered.empty:
     st.warning("No transactions match these filters. Adjust the filters in the sidebar.")
     st.stop()
+
+# ---------- Horizontal workspace navigation ----------
+
+page = st.radio(
+    "Workspace",
+    PAGES,
+    format_func=lambda name: f"{PAGE_ICONS[name]}  {name}",
+    horizontal=True,
+    label_visibility="collapsed",
+    key="paylens_page",
+)
 
 # ---------- Page header ----------
 
