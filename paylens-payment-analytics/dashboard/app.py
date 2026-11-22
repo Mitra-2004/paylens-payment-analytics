@@ -213,14 +213,14 @@ with tab_overview:
     b.info(f"**Most active category:** {top_category['category']} — {int(top_category['size']):,} transactions")
     c.info(f"**Simulated fraud alerts:** {fraud_count:,} transactions labelled fraudulent")
     report = (
-        "PAYLENS — EXECUTIVE SUMMARY (SYNTHETIC DATA)\\n"
-        f"Transactions: {len(filtered):,}\\n"
-        f"Transaction value: INR {total_value:,.2f}\\n"
-        f"Success rate: {success_rate:.2f}%\\n"
-        f"Simulated fraud rate: {fraud_rate:.2f}%\\n"
-        f"Top region by value: {top_region['region']}\\n"
-        f"Top category by volume: {top_category['category']}\\n"
-        "This report uses simulated transactions and is not a real-world fraud assessment.\\n"
+        "PAYLENS — EXECUTIVE SUMMARY (SYNTHETIC DATA)\n"
+        f"Transactions: {len(filtered):,}\n"
+        f"Transaction value: INR {total_value:,.2f}\n"
+        f"Success rate: {success_rate:.2f}%\n"
+        f"Simulated fraud rate: {fraud_rate:.2f}%\n"
+        f"Top region by value: {top_region['region']}\n"
+        f"Top category by volume: {top_category['category']}\n"
+        "This report uses simulated transactions and is not a real-world fraud assessment.\n"
     )
     st.download_button("📥 Export executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
 
