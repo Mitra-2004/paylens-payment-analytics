@@ -248,9 +248,9 @@ with tab_investigate:
     left_queue, right_queue = st.columns([1, 2], gap="large")
     with left_queue:
         st.markdown("**Review queue**")
-        queue_mode = st.segmented_control(
+        queue_mode = st.radio(
             "Queue", ["Highest risk", "Largest amount", "Recent"],
-            default="Highest risk", key="investigation_queue",
+            horizontal=True, key="investigation_queue",
         )
         if queue_mode == "Largest amount":
             queue = filtered.sort_values("amount", ascending=False)
@@ -335,8 +335,6 @@ with tab_investigate:
         hide_index=True, use_container_width=True,
     )
     st.markdown("#### Analyst decision")
-    note_key = f"case_note_{int(selected_id)}"
-    status_key = f"case_status_{int(selected_id)}"
     if "case_records" not in st.session_state:
         st.session_state["case_records"] = {}
     previous = st.session_state["case_records"].get(int(selected_id), {})
