@@ -24,16 +24,32 @@ GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
 st.title("💳 PayLens")
 st.caption("Payment Network Intelligence • Analytics, fraud detection and merchant risk")
 
-if not DATA_FILE.exists():
+REQUIRED_COLUMNS = {
+    "transaction_id", "timestamp", "customer_id", "merchant_id",
+    "category", "region", "amount", "success", "payment_method",
+    "device_type", "transaction_hour", "is_weekend",
+    "merchant_risk_score", "is_fraud",
+}
+
+def dataset_needs_refresh(path: Path) -> bool:
+    if not path.exists():
+        return True
+    try:
+        existing_columns = set(pd.read_csv(path, nrows=0).columns)
+        return not REQUIRED_COLUMNS.issubset(existing_columns)
+    except (OSError, ValueError, pd.errors.ParserError, pd.errors.EmptyDataError):
+        return True
+
+if dataset_needs_refresh(DATA_FILE):
     if not GENERATOR_FILE.exists():
         st.error(f"Dataset generator not found: {GENERATOR_FILE}")
         st.stop()
-    runpy.run_path(str(GENERATOR_FILE))
+    with st.spinner("Preparing the latest synthetic payment dataset..."):
+        runpy.run_path(str(GENERATOR_FILE))
 
-if not DATA_FILE.exists():
-    st.error(f"Dataset generation did not create: {DATA_FILE}")
+if dataset_needs_refresh(DATA_FILE):
+    st.error("The generated dataset is missing required columns. Check the generator and Streamlit logs.")
     st.stop()
-
 
 @st.cache_data
 def load_data(file_path: str, modified_time: float) -> pd.DataFrame:
