@@ -50,6 +50,7 @@ success = rng.binomial(1, success_probability)
 
 df = pd.DataFrame({
     "transaction_id": np.arange(1, n + 1),
+    "dataset_version": np.full(n, 2),
     "timestamp": timestamps,
     "customer_id": customer_ids,
     "merchant_id": merchant_ids,
