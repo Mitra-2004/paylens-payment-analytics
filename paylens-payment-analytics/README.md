@@ -31,7 +31,7 @@
 ### 2. Investigations
 - Prioritize payments by risk, amount, or recency
 - Inspect customer and merchant activity associated with a selected payment
-- Review transparent rule-based risk cues (not SHAP/causal explanations)
+- Review rule-based risk cues and calculate on-demand **SHAP** contributions for an individual Random Forest model score
 - Record investigation notes and statuses temporarily in the Streamlit session; export notes to CSV
 
 ### 3. Fraud intelligence
@@ -45,7 +45,7 @@
 - Merchant-level transaction volume and value
 - Average ticket size and payment success rate
 - Observed synthetic fraud rate and average predicted risk
-- Merchant comparison, merchant-specific drill-down, transaction history and portfolio scorecard
+- Merchant comparison, merchant-specific drill-down, transaction history, concise evidence-based performance brief and portfolio scorecard
 
 ### 5. Customer insights
 - Customer transaction value and frequency
@@ -99,7 +99,7 @@ The synthetic fraud label is sampled from an engineered process based on amount,
 
 **Evaluation:** The Fraud Intelligence page shows precision, recall, F1, ROC-AUC, average precision (AP), the fraud-prevalence/random-ranking AP baseline, Brier score and a threshold-adjustable confusion matrix on the chronological holdout. AP is especially useful for these imbalanced synthetic labels. Scores used for older records are marked **in-sample**; newer held-out predictions are marked **out-of-sample**.
 
-For this educational demo, Random Forest class weights are configured as `{0: 1, 1: 5}` rather than fully balancing the classes. The dashboard's illustrative review bands are **Low: under 10%**, **Medium: 10–25%** and **High: over 25%**. The scores have **not been calibrated or externally validated**; the bands are convenience categories, *not* deployable risk policies. Rule-based investigation cues are *not* SHAP values or causal explanations.
+For this educational demo, Random Forest class weights are configured as `{0: 1, 1: 5}` rather than fully balancing the classes. The dashboard's illustrative review bands are **Low: under 10%**, **Medium: 10–25%** and **High: over 25%**. The scores have **not been calibrated or externally validated**; the bands are convenience categories, *not* deployable risk policies. Rule-based investigation cues are separate from the optional per-transaction **SHAP** chart. The SHAP bars explain contributions to this model score, not causality.
 
 **Limitations:** Because the dataset and fraud mechanism are synthetic, good test metrics only demonstrate recovery of engineered patterns. A chronological split reduces one form of evaluation optimism but cannot establish performance on real payment data. The CSV is a simulation, and no fraud-alerting or case-management integration is connected to real institutions.
 
@@ -117,7 +117,7 @@ The tests regenerate the deterministic sample, check required columns, transacti
 
 - Walk-forward validation on multiple time windows
 - Probability calibration and repeated temporal evaluation beyond the current holdout
-- Explainability with SHAP
+- Expand on-demand SHAP to global model explainability and stability checks
 - Merchant network graph and customer–merchant relationship analysis
 - Automated model monitoring and drift checks
 - Expand existing dataset smoke tests and publish a data dictionary
