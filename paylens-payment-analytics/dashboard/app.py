@@ -334,7 +334,7 @@ def train_fraud_model(data: pd.DataFrame):
     test_probability = model.predict_proba(x_test)[:, 1]
     test_prediction = (test_probability >= 0.50).astype(int)
     metrics = {
-        "accuracy": accuracy_score(y_test, test_prediction),
+        "training_prevalence": float(y_train.mean()),        "accuracy": accuracy_score(y_test, test_prediction),
         "precision": precision_score(y_test, test_prediction, zero_division=0),
         "recall": recall_score(y_test, test_prediction, zero_division=0),
         "f1": f1_score(y_test, test_prediction, zero_division=0),
@@ -661,7 +661,7 @@ if page == "Investigations":
                 ("Model risk score", f"{risk_value:.1%}", None),
                 ("Risk band", band, None),
             ], compact=True)
-            st.caption("Illustrative model risk estimate")
+            st.caption(f"Risk model · {selected['score_provenance']}. Scores are not calibrated fraud probabilities.")
             risk_meter(risk_value)
 
             st.markdown("**Payment details**")
