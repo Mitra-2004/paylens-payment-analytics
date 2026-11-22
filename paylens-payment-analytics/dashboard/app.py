@@ -18,7 +18,9 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 
-st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳", layout="wide")
+st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳", layout="wide", initial_sidebar_state="expanded")
+px.defaults.template = "plotly_dark"
+px.defaults.color_discrete_sequence = ["#5B9CF6", "#34C6B3", "#A48CF3", "#F2B76B", "#E47C8D", "#8BA5C5"]
 
 st.markdown("""
 <style>
@@ -32,6 +34,16 @@ st.markdown("""
 .stTabs [data-baseweb="tab"] {background:transparent;border-radius:0;padding:12px 17px;color:#b9c7d8;}
 .stTabs [aria-selected="true"] {color:#f1f5fa;border-bottom:2px solid #59b6ab;}
 h1,h2,h3 {letter-spacing:-.035em;}
+html {scroll-behavior:smooth;}
+[data-testid="stMetric"] {transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease;}
+[data-testid="stMetric"]:hover {transform:translateY(-2px);border-color:#4e7195;box-shadow:0 10px 28px #0002;}
+.stTabs [data-baseweb="tab"] {transition:background .16s ease,color .16s ease;}
+.stTabs [data-baseweb="tab"]:hover {background:#19283a;color:#f4f7fb;}
+div.stButton button,div.stDownloadButton button {transition:background .16s ease,border-color .16s ease,transform .16s ease;}
+div.stButton button:hover,div.stDownloadButton button:hover {transform:translateY(-1px);}
+[data-testid="stPlotlyChart"] {border:1px solid #24354b;border-radius:12px;overflow:hidden;background:#111d2d;}
+@media(max-width:800px){.block-container{padding:1rem .85rem 2rem;}[data-testid="stMetric"]{padding:12px;}.stTabs [data-baseweb="tab"]{padding:9px 11px;}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;scroll-behavior:auto!important;}}
 [data-testid="stAlert"] {border-radius:9px;}
 div.stButton button,div.stDownloadButton button {border-radius:8px;}
 </style>
