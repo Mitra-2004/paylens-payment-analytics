@@ -391,10 +391,10 @@ with st.sidebar:
     st.markdown('<div class="pl-nav-label">About this demo</div>', unsafe_allow_html=True)
     with st.expander("Quick guide and methodology", expanded=False):
         st.markdown(
-            "**1. Overview** — start with the performance summary.  \\n"
-            "**2. Investigations** — inspect a payment, review cues and record a demo decision.  \\n"
-            "**3. Fraud Intelligence** — adjust the threshold and evaluate held-out predictions.  \\n"
-            "**4. Merchant Risk** — compare merchants and inspect their transactions."
+            "1. **Overview:** Review KPIs, payment trends and risk distribution.\n"
+            "2. **Investigations:** Open a payment, inspect signals and record a demo decision.\n"
+            "3. **Fraud Intelligence:** Explore test-set precision and recall by threshold.\n"
+            "4. **Merchant Risk:** Compare merchants and drill into transaction history."
         )
         st.caption("Synthetic labels and model scores are educational, not banking decisions.")
         st.link_button("Read source code", "https://github.com/Mitra-2004/paylens-payment-analytics", use_container_width=True)
