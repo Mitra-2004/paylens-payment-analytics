@@ -13,15 +13,15 @@ REQUIRED_COLUMNS = {
     "transaction_id", "timestamp", "customer_id", "merchant_id",
     "category", "region", "amount", "success", "payment_method",
     "device_type", "transaction_hour", "is_weekend",
-    "merchant_risk_score", "is_fraud",
+    "merchant_risk_score", "is_fraud", "dataset_version",
 }
 
 
 class PaymentDatasetTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        if not DATA_FILE.exists():
-            runpy.run_path(str(GENERATOR))
+        # Generate a fresh, deterministic dataset to avoid testing stale CSVs.
+        runpy.run_path(str(GENERATOR))
         cls.df = pd.read_csv(DATA_FILE, parse_dates=["timestamp"])
 
     def test_dataset_shape(self):
@@ -43,6 +43,28 @@ class PaymentDatasetTests(unittest.TestCase):
 
     def test_timestamps_present(self):
         self.assertFalse(self.df["timestamp"].isna().any())
+
+    def test_timestamps_match_engineered_features(self):
+        self.assertTrue(
+            (self.df["timestamp"].dt.hour == self.df["transaction_hour"]).all()
+        )
+        self.assertTrue(
+            ((self.df["timestamp"].dt.dayofweek >= 5).astype(int) == self.df["is_weekend"]).all()
+        )
+
+    def test_dataset_version(self):
+        self.assertTrue((self.df["dataset_version"] == 2).all())
+
+    def test_chronological_holdout(self):
+        ordered = self.df.sort_values(["timestamp", "transaction_id"])
+        split_at = int(len(ordered) * 0.75)
+        train, test = ordered.iloc[:split_at], ordered.iloc[split_at:]
+        self.assertLessEqual(train["timestamp"].max(), test["timestamp"].min())
+        self.assertEqual(len(train), 18750)
+        self.assertEqual(len(test), 6250)
+        self.assertEqual(train["is_fraud"].nunique(), 2)
+        self.assertEqual(test["is_fraud"].nunique(), 2)
+
 
 
 if __name__ == "__main__":
