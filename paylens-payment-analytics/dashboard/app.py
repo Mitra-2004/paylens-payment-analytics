@@ -636,16 +636,28 @@ if page == "Merchant Risk":
         st.caption("The model scores are generated from synthetic transactions and are not independently validated risk assessments.")
     with st.expander("Portfolio exploration charts", expanded=False):
         left, right = st.columns(2)
-
-            with left:
-                st.markdown("**Merchants with highest predicted risk**")
+        with left:
+            st.markdown("**Merchants with highest predicted risk**")
             top_risk = merchant_summary.nlargest(12, "predicted_risk")
-            st.plotly_chart(px.bar(top_risk.sort_values("predicted_risk"), x="predicted_risk", y="merchant_id", orientation="h", title="Average predicted fraud risk (%)"), use_container_width=True)
+            st.plotly_chart(
+                px.bar(top_risk.sort_values("predicted_risk"), x="predicted_risk",
+                       y="merchant_id", orientation="h",
+                       title="Average predicted fraud risk (%)"),
+                use_container_width=True,
+            )
         with right:
             st.markdown("**Merchant value vs. predicted risk**")
-            st.plotly_chart(px.scatter(merchant_summary, x="transaction_value", y="predicted_risk", size="transactions", hover_name="merchant_id", title="Merchant portfolio map", labels={"transaction_value": "Transaction value (₹)", "predicted_risk": "Predicted risk (%)"}), use_container_width=True)
+            st.plotly_chart(
+                px.scatter(merchant_summary, x="transaction_value", y="predicted_risk",
+                           size="transactions", hover_name="merchant_id",
+                           title="Merchant portfolio map"),
+                use_container_width=True,
+            )
         st.markdown("**Merchant scorecard**")
-        st.dataframe(merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
+        st.dataframe(
+            merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2),
+            use_container_width=True, hide_index=True,
+        )
 
 if page == "Customer Insights":
     st.subheader("Customer Insights")
