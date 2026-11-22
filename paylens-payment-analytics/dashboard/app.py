@@ -161,6 +161,30 @@ a:focus-visible{outline:3px solid #ffc296;outline-offset:3px;border-radius:4px}
 }
 @media(max-width:390px){.pl-kpi-grid{grid-template-columns:1fr}}
 
+/* Accessibility and component consistency — all workspaces */
+:root{--focus-ring:#ffcbab;--button-text:#171012}
+.st-key-paylens_page [role="radiogroup"] label:focus-within,
+[data-testid="stSegmentedControl"] button:focus-visible,
+button:focus-visible, input:focus-visible, textarea:focus-visible,
+select:focus-visible, [role="slider"]:focus-visible,
+[data-testid="stExpander"] summary:focus-visible{
+ outline:3px solid var(--focus-ring)!important;
+ outline-offset:3px!important;
+}
+div.stButton button,div.stDownloadButton button,div.stFormSubmitButton button,
+[data-testid="stSegmentedControl"] button{min-height:44px}
+div.stButton button[kind="primary"],div.stFormSubmitButton button[kind="primary"]{
+ color:var(--button-text)!important;font-weight:700;
+}
+.pl-panel-sub,.pl-page-sub,.pl-kpi-note,.pl-insight-s,.pl-row-s{line-height:1.55}
+.pl-txn-id,.pl-kpi-value{overflow-wrap:anywhere}
+[data-testid="stDataFrame"]{max-width:100%}
+@media(max-width:950px){.pl-status{white-space:normal}}
+@media(prefers-contrast:more){
+ .pl-kpi,[data-testid="stVerticalBlockBorderWrapper"],[data-testid="stExpander"]{border-color:#77717a!important}
+ .pl-panel-sub,.pl-kpi-note,.pl-page-sub{color:#e4e0e4}
+}
+
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
 """
 st.markdown(f"<style>{APP_CSS}</style>", unsafe_allow_html=True)
@@ -217,7 +241,7 @@ def kpi_row(items, compact=False):
 
 def panel_header(title, subtitle, icon):
     st.markdown(
-        f'<div class="pl-panel-head"><div class="pl-chip">{escape(icon)}</div>'
+        f'<div class="pl-panel-head"><div class="pl-chip" aria-hidden="true">{escape(icon)}</div>'
         f'<div><div class="pl-panel-title">{escape(title)}</div>'
         f'<div class="pl-panel-sub">{escape(subtitle)}</div></div></div>',
         unsafe_allow_html=True,
@@ -454,7 +478,7 @@ def open_merchant(merchant_id: int) -> None:
 
 with st.sidebar:
     st.markdown(
-        '<div class="pl-brand"><div class="pl-logo">P</div>'
+        '<div class="pl-brand"><div class="pl-logo" aria-hidden="true">P</div>'
         '<div><div class="pl-brand-name">PayLens</div>'
         '<div class="pl-brand-sub">Payment intelligence</div></div></div>',
         unsafe_allow_html=True,
@@ -738,6 +762,11 @@ if page == "Investigations":
             st.caption("Queue shows up to 150 ranked transactions, plus any payment opened from another workspace.")
 
     selected = filtered.loc[filtered["transaction_id"] == selected_id].iloc[0]
+    st.button(
+        "View this merchant profile",
+        on_click=open_merchant, args=(int(selected["merchant_id"]),),
+        help="Open the selected transaction's merchant under the current filters.",
+    )
     merchant_history = scored_df.loc[scored_df["merchant_id"] == selected["merchant_id"]]
     customer_history = scored_df.loc[scored_df["customer_id"] == selected["customer_id"]]
     risk_value = float(selected["predicted_fraud_risk"])
@@ -847,7 +876,7 @@ if page == "Investigations":
                     )
 
     with st.container(border=True):
-        panel_header("Connected activity", "Other payments linked to this merchant or customer", "◎")
+        panel_header("Connected activity", "Full synthetic dataset; not limited by global filters", "◎")
         kpi_row([
             ("Merchant transactions", f"{len(merchant_history):,}", None),
             ("Merchant average model risk", f"{merchant_history['predicted_fraud_risk'].mean():.1%}", None),
@@ -1182,6 +1211,10 @@ if page == "Merchant Risk":
             },
         )
         st.caption("Model scores are generated from synthetic transactions and are not independently validated risk assessments.")
+        st.button(
+            "Explore customer–merchant relationships",
+            on_click=navigate_to, args=("Network Intelligence",),
+        )
         if not profile_payments.empty:
             tx_to_review = int(profile_payments.sort_values(
                 "predicted_fraud_risk", ascending=False
