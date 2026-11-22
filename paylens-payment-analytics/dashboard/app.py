@@ -332,7 +332,7 @@ def train_fraud_model(data: pd.DataFrame):
     model.fit(x_train, y_train)
 
     test_probability = model.predict_proba(x_test)[:, 1]
-    test_prediction = (test_probability >= 0.50).astype(int)
+    test_prediction = (test_probability >= 0.15).astype(int)  # illustrative review threshold
     metrics = {
         "training_prevalence": float(y_train.mean()),        "accuracy": accuracy_score(y_test, test_prediction),
         "precision": precision_score(y_test, test_prediction, zero_division=0),
@@ -746,9 +746,9 @@ if page == "Investigations":
 if page == "Fraud Intelligence":
     kpi_row([
         ("Accuracy", f"{model_metrics['accuracy'] * 100:.1f}%", "Held-out test set"),
-        ("Precision", f"{model_metrics['precision'] * 100:.1f}%", "Held-out test set"),
-        ("Recall", f"{model_metrics['recall'] * 100:.1f}%", "Held-out test set"),
-        ("F1 score", f"{model_metrics['f1']:.3f}", "Held-out test set"),
+        ("Precision", f"{model_metrics['precision'] * 100:.1f}%", "Held-out · 15% threshold"),
+        ("Recall", f"{model_metrics['recall'] * 100:.1f}%", "Held-out · 15% threshold"),
+        ("F1 score", f"{model_metrics['f1']:.3f}", "Held-out · 15% threshold"),
         ("ROC-AUC", f"{model_metrics['roc_auc']:.3f}", "Held-out test set"),
     ])
 
