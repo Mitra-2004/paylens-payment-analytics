@@ -426,6 +426,11 @@ with st.sidebar:
             "Payment method", sorted(df["payment_method"].unique()),
             default=sorted(df["payment_method"].unique()),
         )
+        selected_risks = st.multiselect(
+            "Model risk band", ["Low", "Medium", "High"],
+            default=["Low", "Medium", "High"],
+            help="Uses illustrative model risk bands, not production fraud decisions.",
+        )
         min_amount, max_amount = float(df["amount"].min()), float(df["amount"].max())
         amount_range = st.slider(
             "Transaction amount (₹)", min_value=0.0,
@@ -455,12 +460,16 @@ filtered = scored_df[
     scored_df["region"].isin(selected_regions)
     & scored_df["category"].isin(selected_categories)
     & scored_df["payment_method"].isin(selected_methods)
+    & scored_df["risk_band"].isin(selected_risks)
     & scored_df["amount"].between(*amount_range)
     & scored_df["timestamp"].dt.date.between(start_date, end_date)
 ].copy()
 
 if filtered.empty:
-    st.warning("No transactions match these filters. Adjust the filters in the sidebar.")
+    st.info(
+        "No transactions match the selected filters. Broaden the date, amount, "
+        "region, payment method or risk band in the sidebar."
+    )
     st.stop()
 
 # ---------- Horizontal workspace navigation ----------
@@ -1183,17 +1192,67 @@ if page == "Customer Insights":
 
 if page == "Transactions":
     with st.container(border=True):
-        panel_header("Find a transaction", "Search by numeric transaction ID within the active filters", "⌕")
-        search_id = st.text_input("Transaction ID", placeholder="e.g. 1042", label_visibility="collapsed")
+        panel_header(
+            "Transaction explorer",
+            "Search, sort and page through records matching your active filters",
+            "⌕",
+        )
+        search_id = st.text_input(
+            "Transaction ID", placeholder="Search numeric transaction ID, e.g. 1042",
+            help="Searches within transactions matching the global filters.",
+        )
+        transaction_view = filtered.copy()
         if search_id.strip():
             if search_id.strip().isdigit():
-                filtered = filtered.loc[filtered["transaction_id"] == int(search_id.strip())].copy()
+                transaction_view = transaction_view.loc[
+                    transaction_view["transaction_id"] == int(search_id.strip())
+                ].copy()
             else:
-                st.warning("Enter a numeric transaction ID.")
-        st.caption(f"Showing {min(500, len(filtered)):,} of {len(filtered):,} filtered transactions.")
-        st.dataframe(filtered.head(500), use_container_width=True, hide_index=True)
-        csv = filtered.to_csv(index=False).encode("utf-8")
-        st.download_button("Download filtered transactions (CSV)", data=csv, file_name="paylens_filtered_transactions.csv", mime="text/csv")
+                st.warning("Transaction IDs contain numbers only.")
+                transaction_view = transaction_view.iloc[0:0]
+
+        sort_mode = st.selectbox(
+            "Sort transactions",
+            ["Most recent", "Oldest first", "Highest value", "Highest model risk"],
+            index=0,
+        )
+        sort_options = {
+            "Most recent": ("timestamp", False),
+            "Oldest first": ("timestamp", True),
+            "Highest value": ("amount", False),
+            "Highest model risk": ("predicted_fraud_risk", False),
+        }
+        sort_col, ascending = sort_options[sort_mode]
+        transaction_view = transaction_view.sort_values(
+            [sort_col, "transaction_id"], ascending=[ascending, True]
+        )
+
+        if transaction_view.empty:
+            st.info("No matching transaction found. Try another ID or change your filters.")
+        else:
+            page_size = st.selectbox("Rows per page", [25, 50, 100], index=1)
+            page_count = max(1, (len(transaction_view) + page_size - 1) // page_size)
+            page_number = st.number_input(
+                "Page", min_value=1, max_value=page_count, value=1, step=1,
+                key=f"transaction_page_{sort_mode}_{page_size}_{len(transaction_view)}",
+            )
+            start_row = (page_number - 1) * page_size
+            stop_row = min(start_row + page_size, len(transaction_view))
+            st.caption(
+                f"Showing records {start_row + 1:,}–{stop_row:,} "
+                f"of {len(transaction_view):,} · Page {page_number} of {page_count}"
+            )
+            st.dataframe(
+                transaction_view.iloc[start_row:stop_row],
+                hide_index=True, use_container_width=True,
+            )
+            st.download_button(
+                "Download all matching transactions (CSV)",
+                data=transaction_view.to_csv(index=False).encode("utf-8"),
+                file_name="paylens_filtered_transactions.csv",
+                mime="text/csv",
+                help="Exports every transaction matching your current filters and search, not only this page.",
+            )
 
 st.divider()
 st.caption(
