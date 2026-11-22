@@ -335,7 +335,8 @@ def train_fraud_model(data: pd.DataFrame):
     test_probability = model.predict_proba(x_test)[:, 1]
     test_prediction = (test_probability >= 0.15).astype(int)  # illustrative review threshold
     metrics = {
-        "training_prevalence": float(y_train.mean()),        "accuracy": accuracy_score(y_test, test_prediction),
+        "training_prevalence": float(y_train.mean()),
+        "accuracy": accuracy_score(y_test, test_prediction),
         "precision": precision_score(y_test, test_prediction, zero_division=0),
         "recall": recall_score(y_test, test_prediction, zero_division=0),
         "f1": f1_score(y_test, test_prediction, zero_division=0),
@@ -734,12 +735,21 @@ if page == "Investigations":
                     "class-1 score relative to its baseline. They do not prove causality or "
                     "establish real-world fraud probability."
                 )
+                # Persist the last selected explanation through Streamlit reruns.
+                explanation_key = f"shap_explanation_{int(selected_id)}"
                 if st.button("Calculate SHAP explanation", key=f"shap_tx_{int(selected_id)}"):
-                    with st.spinner("Calculating feature contributions..."):
-                        base, predicted, contributions = explain_transaction(
-                            selected, fraud_model, model_feature_columns
-                        )
-                    contribution_sum = base + contributions["contribution"].sum()
+                    try:
+                        with st.spinner("Calculating feature contributions..."):
+                            st.session_state[explanation_key] = explain_transaction(
+                                selected, fraud_model, model_feature_columns
+                            )
+                    except (ValueError, TypeError, RuntimeError, IndexError) as exc:
+                        st.error("SHAP could not explain this transaction. Try another record or review the application logs.")
+                        st.caption(f"Explanation error type: {type(exc).__name__}")
+
+                if explanation_key in st.session_state:
+                    base, predicted, contributions = st.session_state[explanation_key]
+                    contribution_sum = base + float(contributions["contribution"].sum())
                     st.caption(
                         f"Baseline model score: {base:.1%} · "
                         f"Feature contributions: {contributions['contribution'].sum():+.1%} · "
@@ -756,13 +766,8 @@ if page == "Investigations":
                     effect_chart = px.bar(
                         top_effects, x="contribution", y="feature", orientation="h",
                         color="direction",
-                        color_discrete_map={
-                            "Raises score": PINK, "Lowers score": "#7db4eb"
-                        },
-                        labels={
-                            "contribution": "Contribution to model score",
-                            "feature": "Input feature",
-                        },
+                        color_discrete_map={"Raises score": PINK, "Lowers score": "#7db4eb"},
+                        labels={"contribution": "Contribution to model score", "feature": "Input feature"},
                     )
                     effect_chart.update_traces(
                         hovertemplate="%{y}<br>Effect: %{x:+.4f}<extra></extra>"
@@ -771,9 +776,8 @@ if page == "Investigations":
                     effect_chart.update_xaxes(tickformat="+.1%")
                     st.plotly_chart(effect_chart, use_container_width=True, config=PLOT_CONFIG)
                     st.caption(
-                        "Positive bars raise the simulated model's risk score; "
-                        "negative bars lower it. Feature contributions reflect "
-                        "encoded columns and can be correlated."
+                        "Positive bars raise the simulated model's risk score; negative bars lower it. "
+                        "Encoded feature contributions may be correlated and are not causal explanations."
                     )
 
     with st.container(border=True):
