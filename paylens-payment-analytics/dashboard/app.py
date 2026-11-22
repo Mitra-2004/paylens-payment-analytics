@@ -19,6 +19,7 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 from sklearn.metrics import brier_score_loss
+from sklearn.calibration import calibration_curve
 
 st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳", layout="wide", initial_sidebar_state="expanded")
 px.defaults.template = "plotly_dark"
@@ -912,6 +913,64 @@ if page == "Fraud Intelligence":
             f"Selected threshold {threshold:.2f}: precision {selected_precision:.1%}, recall {selected_recall:.1%}. "
             "The full curve stays fixed because it represents all possible thresholds."
         )
+
+    with st.container(border=True):
+        panel_header(
+            "Model reliability", "Probability calibration diagnostics and review workload", "◎"
+        )
+        st.caption(
+            "Risk scores are currently uncalibrated. Use the calibration chart to see "
+            "how average scores compare with observed synthetic fraud frequencies in the held-out set."
+        )
+        reliability_left, reliability_right = st.columns([1.1, 1], gap="medium")
+        with reliability_left:
+            observed, forecast = calibration_curve(
+                test_labels, test_probabilities, n_bins=8, strategy="quantile"
+            )
+            reliability_chart = px.line(
+                x=[0, 1], y=[0, 1],
+                labels={"x": "Mean model score", "y": "Observed synthetic fraud frequency"},
+            )
+            reliability_chart.update_traces(
+                line={"dash": "dash", "color": "#8e8b91", "width": 1.5},
+                name="Ideal calibration",
+                showlegend=True,
+            )
+            reliability_chart.add_scatter(
+                x=forecast, y=observed, mode="lines+markers",
+                name="Observed reliability", line={"color": ACCENT, "width": 2.5},
+            )
+            style_fig(reliability_chart, height=310, legend=True)
+            reliability_chart.update_layout(
+                xaxis_range=[0, 1], yaxis_range=[0, 1],
+                legend={"orientation": "h", "y": 1.15},
+            )
+            st.plotly_chart(reliability_chart, use_container_width=True, config=PLOT_CONFIG)
+        with reliability_right:
+            st.markdown("**Threshold trade-offs · held-out test set**")
+            tradeoff_rows = []
+            for cutoff in [0.05, 0.10, 0.15, 0.20, 0.25, 0.35, 0.50]:
+                flags = (test_probabilities >= cutoff).astype(int)
+                tradeoff_rows.append({
+                    "Threshold": cutoff,
+                    "Precision": precision_score(test_labels, flags, zero_division=0),
+                    "Recall": recall_score(test_labels, flags, zero_division=0),
+                    "Flagged": int(flags.sum()),
+                    "False alerts": int(((flags == 1) & (test_labels == 0)).sum()),
+                })
+            st.dataframe(
+                pd.DataFrame(tradeoff_rows),
+                hide_index=True, use_container_width=True,
+                column_config={
+                    "Threshold": st.column_config.NumberColumn(format="%.0f%%"),
+                    "Precision": st.column_config.NumberColumn(format="%.1f%%"),
+                    "Recall": st.column_config.NumberColumn(format="%.1f%%"),
+                },
+            )
+            st.caption(
+                "The trade-off table is calculated exclusively on held-out transactions. "
+                "Thresholds are demonstrations, not validated operational policies."
+            )
 
     high_risk = filtered[filtered["risk_band"] == "High"].sort_values("predicted_fraud_risk", ascending=False)
     left, right = st.columns(2, gap="medium")
