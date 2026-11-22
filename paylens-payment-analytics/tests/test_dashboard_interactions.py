@@ -31,9 +31,10 @@ class DashboardWorkflowTests(unittest.TestCase):
         )
         app = shap_button.click().run()
         self.assertFalse(app.exception, f"SHAP calculation errors: {app.exception}")
+        self.assertFalse(app.error, f"SHAP displayed an error: {app.error}")
         self.assertTrue(
-            any(str(key).startswith("shap_explanation_") for key in app.session_state),
-            "The selected transaction's SHAP explanation was not saved to session state.",
+            any("Baseline model score:" in str(markdown.value) for markdown in app.markdown),
+            "SHAP calculation did not render its baseline and contributions.",
         )
 
         status_control = next(select for select in app.selectbox if select.label == "Decision")
