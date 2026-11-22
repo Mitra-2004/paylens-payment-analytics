@@ -8,6 +8,9 @@ import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
+    confusion_matrix,
+    average_precision_score,
+    precision_recall_curve,
     f1_score,
     precision_score,
     recall_score,
@@ -94,6 +97,9 @@ def train_fraud_model(data: pd.DataFrame):
         "recall": recall_score(y_test, test_prediction, zero_division=0),
         "f1": f1_score(y_test, test_prediction, zero_division=0),
         "roc_auc": roc_auc_score(y_test, test_probability),
+        "average_precision": average_precision_score(y_test, test_probability),
+        "test_labels": y_test.to_numpy(),
+        "test_probabilities": test_probability,
     }
 
     all_probability = model.predict_proba(features)[:, 1]
@@ -172,13 +178,44 @@ with tab_overview:
 
 with tab_fraud:
     st.subheader("Fraud Intelligence")
-    st.caption("A Random Forest classifier is trained on simulated fraud labels. Scores are educational estimates, not production fraud decisions.")
+    st.caption("Random Forest on synthetic fraud labels. Test metrics use held-out transactions; transaction queue scores include in-sample predictions and are illustrative, not independently validated.")
     f1, f2, f3, f4, f5 = st.columns(5)
     f1.metric("Accuracy", f"{model_metrics['accuracy'] * 100:.1f}%")
     f2.metric("Precision", f"{model_metrics['precision'] * 100:.1f}%")
     f3.metric("Recall", f"{model_metrics['recall'] * 100:.1f}%")
     f4.metric("F1 score", f"{model_metrics['f1']:.3f}")
     f5.metric("ROC-AUC", f"{model_metrics['roc_auc']:.3f}")
+
+    st.markdown("**Classification threshold analysis (held-out test set)**")
+    threshold = st.slider("Fraud alert threshold", min_value=0.05, max_value=0.95, value=0.50, step=0.05)
+    test_labels = model_metrics["test_labels"]
+    test_probabilities = model_metrics["test_probabilities"]
+    threshold_predictions = (test_probabilities >= threshold).astype(int)
+    cm = confusion_matrix(test_labels, threshold_predictions, labels=[0, 1])
+    tp = int(cm[1, 1])
+    fp = int(cm[0, 1])
+    fn = int(cm[1, 0])
+    tn = int(cm[0, 0])
+    p1, p2, p3, p4 = st.columns(4)
+    p1.metric("Test precision", f"{precision_score(test_labels, threshold_predictions, zero_division=0):.1%}")
+    p2.metric("Test recall", f"{recall_score(test_labels, threshold_predictions, zero_division=0):.1%}")
+    p3.metric("False positives", f"{fp:,}")
+    p4.metric("Missed fraud cases", f"{fn:,}")
+    st.caption(f"Held-out test set: {len(test_labels):,} transactions; {tp:,} true positives and {tn:,} true negatives. Average precision (PR-AUC summary): {model_metrics['average_precision']:.3f}.")
+    cm_frame = pd.DataFrame(
+        cm,
+        index=["Actual legitimate", "Actual fraud"],
+        columns=["Predicted legitimate", "Predicted fraud"],
+    )
+    left_eval, right_eval = st.columns(2)
+    with left_eval:
+        st.markdown("**Confusion matrix**")
+        st.dataframe(cm_frame, use_container_width=True)
+    with right_eval:
+        st.markdown("**Precision–recall curve (held-out test set)**")
+        pr_precision, pr_recall, _ = precision_recall_curve(test_labels, test_probabilities)
+        pr_frame = pd.DataFrame({"Recall": pr_recall, "Precision": pr_precision})
+        st.plotly_chart(px.line(pr_frame, x="Recall", y="Precision", title="Precision vs. recall"), use_container_width=True)
 
     high_risk = filtered[filtered["risk_band"] == "High"].sort_values("predicted_fraud_risk", ascending=False)
     left, right = st.columns(2)
