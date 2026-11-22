@@ -26,6 +26,16 @@ class DashboardWorkflowTests(unittest.TestCase):
         self.assertEqual(app.session_state["paylens_page"], "Investigations")
         self.assertTrue(any("Select transaction" == select.label for select in app.selectbox))
 
+        shap_button = next(
+            button for button in app.button if button.label == "Calculate SHAP explanation"
+        )
+        app = shap_button.click().run()
+        self.assertFalse(app.exception, f"SHAP calculation errors: {app.exception}")
+        self.assertTrue(
+            any(str(key).startswith("shap_explanation_") for key in app.session_state),
+            "The selected transaction's SHAP explanation was not saved to session state.",
+        )
+
         status_control = next(select for select in app.selectbox if select.label == "Decision")
         app = status_control.set_value("Monitor").run()
         note = next(widget for widget in app.text_area if widget.label == "Investigation notes")
