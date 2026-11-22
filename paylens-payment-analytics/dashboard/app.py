@@ -188,8 +188,8 @@ if filtered.empty:
     st.warning("No transactions match these filters. Adjust the filters in the sidebar.")
     st.stop()
 
-tab_overview, tab_fraud, tab_merchants, tab_customers, tab_explorer = st.tabs(
-    ["Executive Overview", "Fraud Intelligence", "Merchant Risk", "Customer Insights", "Data Explorer"]
+tab_overview, tab_investigate, tab_fraud, tab_merchants, tab_customers, tab_explorer = st.tabs(
+    ["Overview", "Investigations", "Fraud model", "Merchants", "Customers", "Transactions"]
 )
 
 with tab_overview:
@@ -239,6 +239,127 @@ with tab_overview:
         "This report uses simulated transactions and is not a real-world fraud assessment.\n"
     )
     st.download_button("Download executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
+
+
+with tab_investigate:
+    st.subheader("Transaction investigations")
+    st.caption("Explore a simulated payment, its merchant context and model score. Investigation notes are saved only for this browser session.")
+    queue = filtered.sort_values("predicted_fraud_risk", ascending=False)
+    left_queue, right_queue = st.columns([1, 2], gap="large")
+    with left_queue:
+        st.markdown("**Review queue**")
+        queue_mode = st.segmented_control(
+            "Queue", ["Highest risk", "Largest amount", "Recent"],
+            default="Highest risk", key="investigation_queue",
+        )
+        if queue_mode == "Largest amount":
+            queue = filtered.sort_values("amount", ascending=False)
+        elif queue_mode == "Recent":
+            queue = filtered.sort_values("timestamp", ascending=False)
+        candidate_ids = queue["transaction_id"].head(150).astype(int).tolist()
+        selected_id = st.selectbox(
+            "Select transaction",
+            candidate_ids,
+            format_func=lambda value: f"TX-{value:06d}",
+            key="investigation_transaction",
+        )
+        st.dataframe(
+            queue[["transaction_id", "amount", "merchant_id", "predicted_fraud_risk"]].head(15),
+            use_container_width=True, hide_index=True,
+            column_config={
+                "predicted_fraud_risk": st.column_config.ProgressColumn(
+                    "Risk score", min_value=0.0, max_value=1.0, format="%.1f"
+                )
+            },
+        )
+        st.caption("Queue shows up to 150 candidate transactions under your current filters.")
+    selected = filtered.loc[filtered["transaction_id"] == selected_id].iloc[0]
+    merchant_history = scored_df.loc[scored_df["merchant_id"] == selected["merchant_id"]]
+    customer_history = scored_df.loc[scored_df["customer_id"] == selected["customer_id"]]
+    with right_queue:
+        st.markdown(f"### TX-{int(selected_id):06d}")
+        st.caption(f"{selected['timestamp']:%d %b %Y · %H:%M}  ·  {selected['region']}  ·  {selected['category']}")
+        risk_value = float(selected["predicted_fraud_risk"])
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Transaction amount", f"₹{selected['amount']:,.2f}")
+        m2.metric("Model risk score", f"{risk_value:.1%}")
+        m3.metric("Risk band", str(selected["risk_band"]))
+        st.progress(risk_value, text="Illustrative model risk estimate")
+        st.markdown("**Payment details**")
+        detail = pd.DataFrame({
+            "Field": ["Merchant", "Customer", "Payment method", "Device", "Payment result", "Simulated fraud label"],
+            "Value": [
+                f"M-{int(selected['merchant_id']):04d}",
+                f"C-{int(selected['customer_id']):04d}",
+                str(selected["payment_method"]),
+                str(selected["device_type"]),
+                "Successful" if int(selected["success"]) else "Failed",
+                "Fraud" if int(selected["is_fraud"]) else "Legitimate",
+            ],
+        })
+        st.dataframe(detail, hide_index=True, use_container_width=True)
+        st.markdown("**What deserves a closer look?**")
+        amount_cutoff = float(scored_df["amount"].quantile(0.94))
+        indicators = []
+        if selected["amount"] > amount_cutoff:
+            indicators.append("This amount is above the 94th percentile of the synthetic dataset.")
+        if int(selected["transaction_hour"]) <= 4 or int(selected["transaction_hour"]) >= 23:
+            indicators.append("The recorded transaction hour is in the late-night window.")
+        if selected["device_type"] == "Unknown":
+            indicators.append("The device type is unknown.")
+        if float(selected["merchant_risk_score"]) > 0.5:
+            indicators.append("The merchant has an elevated simulated risk attribute.")
+        if selected["payment_method"] in ["Credit Card", "Debit Card"]:
+            indicators.append("Card payment is one of the signals used in the synthetic label-generation process.")
+        if indicators:
+            for indicator in indicators:
+                st.markdown(f"- {indicator}")
+        else:
+            st.write("No predefined synthetic risk indicators stand out for this transaction.")
+        st.caption(
+            "These are transparent, rule-based investigation cues—not SHAP explanations or causal explanations of this model prediction."
+        )
+    st.divider()
+    st.markdown("#### Connected activity")
+    h1, h2, h3 = st.columns(3)
+    h1.metric("Merchant transactions", f"{len(merchant_history):,}")
+    h2.metric("Merchant average model risk", f"{merchant_history['predicted_fraud_risk'].mean():.1%}")
+    h3.metric("Customer transactions", f"{len(customer_history):,}")
+    history_view = st.radio(
+        "Related activity", ["Merchant", "Customer"], horizontal=True, key="investigation_history"
+    )
+    related = merchant_history if history_view == "Merchant" else customer_history
+    related = related.sort_values("timestamp", ascending=False)
+    st.dataframe(
+        related[["transaction_id", "timestamp", "amount", "region", "payment_method", "predicted_fraud_risk"]].head(30),
+        hide_index=True, use_container_width=True,
+    )
+    st.markdown("#### Analyst decision")
+    note_key = f"case_note_{int(selected_id)}"
+    status_key = f"case_status_{int(selected_id)}"
+    if "case_records" not in st.session_state:
+        st.session_state["case_records"] = {}
+    previous = st.session_state["case_records"].get(int(selected_id), {})
+    with st.form(f"case_form_{int(selected_id)}"):
+        decision_options = ["Unreviewed", "Monitor", "Escalate for review", "No action"]
+        previous_status = previous.get("status", "Unreviewed")
+        status = st.selectbox("Decision", decision_options, index=decision_options.index(previous_status))
+        notes = st.text_area("Investigation notes", value=previous.get("notes", ""), max_chars=1000,
+                             placeholder="Document the signals reviewed and why this decision was made.")
+        save = st.form_submit_button("Save case note", type="primary")
+    if save:
+        st.session_state["case_records"][int(selected_id)] = {"status": status, "notes": notes}
+        st.success("Case note saved for this session.")
+    if st.session_state["case_records"]:
+        records = pd.DataFrame([
+            {"transaction_id": tx, **entry}
+            for tx, entry in st.session_state["case_records"].items()
+        ])
+        st.download_button(
+            "Export session case notes", records.to_csv(index=False).encode("utf-8"),
+            file_name="paylens_investigation_notes.csv", mime="text/csv",
+        )
+    st.caption("Session-only notes are not shared or persisted. This is a demonstration workflow, not a production case-management system.")
 
 with tab_fraud:
     st.subheader("Fraud Intelligence")
