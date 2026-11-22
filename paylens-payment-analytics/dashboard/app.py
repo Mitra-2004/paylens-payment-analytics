@@ -349,9 +349,10 @@ if page == "Investigations":
     st.subheader("Transaction investigations")
     st.caption("Explore a simulated payment, its merchant context and model score. Investigation notes are saved only for this browser session.")
     queue = filtered.sort_values("predicted_fraud_risk", ascending=False)
-    left_queue, right_queue = st.columns([1, 2], gap="large")
+    left_queue, right_queue = st.columns([1, 1.65], gap="medium")
     with left_queue:
-        st.markdown("**Review queue**")
+        st.markdown("#### Review queue")
+        st.caption("Sort, select and inspect a payment")
         queue_mode = st.radio(
             "Queue", ["Highest risk", "Largest amount", "Recent"],
             horizontal=True, key="investigation_queue",
@@ -381,7 +382,7 @@ if page == "Investigations":
     merchant_history = scored_df.loc[scored_df["merchant_id"] == selected["merchant_id"]]
     customer_history = scored_df.loc[scored_df["customer_id"] == selected["customer_id"]]
     with right_queue:
-        st.markdown(f"### TX-{int(selected_id):06d}")
+        st.markdown(f"### Transaction · TX-{int(selected_id):06d}")
         st.caption(f"{selected['timestamp']:%d %b %Y · %H:%M}  ·  {selected['region']}  ·  {selected['category']}")
         risk_value = float(selected["predicted_fraud_risk"])
         m1, m2, m3 = st.columns(3)
@@ -552,7 +553,8 @@ if page == "Fraud Intelligence":
     st.caption("The is_fraud column is the synthetic ground-truth label included only to evaluate this demonstration dataset.")
 
 if page == "Merchant Risk":
-    st.subheader("Merchant Risk & Performance")
+    st.subheader("Merchant intelligence")
+    st.caption("Identify concentrated exposure, compare merchant performance and investigate individual merchant profiles.")
     merchant_summary = filtered.groupby("merchant_id").agg(
         transactions=("transaction_id", "count"),
         transaction_value=("amount", "sum"),
@@ -566,16 +568,84 @@ if page == "Merchant Risk":
     merchant_summary["observed_fraud_rate"] *= 100
     merchant_summary["predicted_risk"] *= 100
     merchant_summary["risk_tier"] = pd.cut(merchant_summary["predicted_risk"], [-0.01, 2, 5, 100], labels=["Low", "Medium", "High"])
-    left, right = st.columns(2)
-    with left:
-        st.markdown("**Merchants with highest predicted risk**")
-        top_risk = merchant_summary.nlargest(12, "predicted_risk")
-        st.plotly_chart(px.bar(top_risk.sort_values("predicted_risk"), x="predicted_risk", y="merchant_id", orientation="h", title="Average predicted fraud risk (%)"), use_container_width=True)
-    with right:
-        st.markdown("**Merchant value vs. predicted risk**")
-        st.plotly_chart(px.scatter(merchant_summary, x="transaction_value", y="predicted_risk", size="transactions", hover_name="merchant_id", title="Merchant portfolio map", labels={"transaction_value": "Transaction value (₹)", "predicted_risk": "Predicted risk (%)"}), use_container_width=True)
-    st.markdown("**Merchant scorecard**")
-    st.dataframe(merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
+    st.markdown("#### Portfolio signals")
+    merchant_metrics = st.columns(4)
+    merchant_metrics[0].metric("Merchants in view", f"{len(merchant_summary):,}")
+    merchant_metrics[1].metric("Total processed", f"₹{merchant_summary['transaction_value'].sum():,.0f}")
+    merchant_metrics[2].metric("Average success rate", f"{filtered['success'].mean():.1%}")
+    merchant_metrics[3].metric("Portfolio model risk", f"{filtered['predicted_fraud_risk'].mean():.1%}")
+    chart_mode = st.radio(
+        "Compare merchants by", ["Model risk", "Transaction value", "Payment success"],
+        horizontal=True, key="merchant_chart_mode",
+    )
+    chart_columns = {
+        "Model risk": ("predicted_risk", "Average model risk (%)"),
+        "Transaction value": ("transaction_value", "Processed value (₹)"),
+        "Payment success": ("payment_success_rate", "Success rate (%)"),
+    }
+    chart_column, chart_label = chart_columns[chart_mode]
+    chart_top = merchant_summary.nlargest(12, chart_column).sort_values(chart_column)
+    with st.container(border=True):
+        st.markdown("#### Merchant comparison")
+        st.caption("Compare the top twelve merchants by the selected performance measure")
+        chart = px.bar(
+            chart_top, x=chart_column, y="merchant_id", orientation="h",
+            labels={chart_column: chart_label, "merchant_id": "Merchant"},
+        )
+        chart.update_traces(marker_color="#ff762f")
+        chart.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            height=340, font={"color": "#e8e4e5"},
+            margin={"t": 10, "b": 20, "l": 10, "r": 10},
+            xaxis={"gridcolor": "#39373a"},
+            yaxis={"type": "category"},
+        )
+        st.plotly_chart(chart, use_container_width=True)
+    st.markdown("#### Merchant deep dive")
+    merchant_ids = merchant_summary.sort_values("predicted_risk", ascending=False)["merchant_id"].tolist()
+    selected_merchant = st.selectbox(
+        "Select merchant", merchant_ids,
+        format_func=lambda merchant: f"Merchant M-{int(merchant):04d}",
+        key="merchant_profile_id",
+    )
+    merchant_profile = merchant_summary.loc[
+        merchant_summary["merchant_id"] == selected_merchant
+    ].iloc[0]
+    profile_cols = st.columns(4)
+    profile_cols[0].metric("Transactions", f"{int(merchant_profile['transactions']):,}")
+    profile_cols[1].metric("Processed value", f"₹{merchant_profile['transaction_value']:,.0f}")
+    profile_cols[2].metric("Average model risk", f"{merchant_profile['predicted_risk']:.1f}%")
+    profile_cols[3].metric("Payment success", f"{merchant_profile['payment_success_rate']:.1f}%")
+    profile_payments = filtered.loc[filtered["merchant_id"] == selected_merchant].sort_values(
+        "timestamp", ascending=False
+    )
+    with st.container(border=True):
+        st.markdown("**Merchant transaction history**")
+        st.dataframe(
+            profile_payments[[
+                "transaction_id", "timestamp", "amount",
+                "category", "payment_method", "predicted_fraud_risk",
+            ]].head(50),
+            hide_index=True, use_container_width=True,
+            column_config={
+                "predicted_fraud_risk": st.column_config.ProgressColumn(
+                    "Risk estimate", min_value=0.0, max_value=1.0, format="%.2f"
+                ),
+            },
+        )
+        st.caption("The model scores are generated from synthetic transactions and are not independently validated risk assessments.")
+    with st.expander("Portfolio exploration charts", expanded=False):
+        left, right = st.columns(2)
+
+            with left:
+                st.markdown("**Merchants with highest predicted risk**")
+            top_risk = merchant_summary.nlargest(12, "predicted_risk")
+            st.plotly_chart(px.bar(top_risk.sort_values("predicted_risk"), x="predicted_risk", y="merchant_id", orientation="h", title="Average predicted fraud risk (%)"), use_container_width=True)
+        with right:
+            st.markdown("**Merchant value vs. predicted risk**")
+            st.plotly_chart(px.scatter(merchant_summary, x="transaction_value", y="predicted_risk", size="transactions", hover_name="merchant_id", title="Merchant portfolio map", labels={"transaction_value": "Transaction value (₹)", "predicted_risk": "Predicted risk (%)"}), use_container_width=True)
+        st.markdown("**Merchant scorecard**")
+        st.dataframe(merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
 
 if page == "Customer Insights":
     st.subheader("Customer Insights")
