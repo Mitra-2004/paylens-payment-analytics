@@ -17,7 +17,7 @@ from sklearn.metrics import (
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.metrics import brier_score_loss
 
 st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳", layout="wide", initial_sidebar_state="expanded")
 px.defaults.template = "plotly_dark"
@@ -267,7 +267,7 @@ REQUIRED_COLUMNS = {
     "transaction_id", "timestamp", "customer_id", "merchant_id",
     "category", "region", "amount", "success", "payment_method",
     "device_type", "transaction_hour", "is_weekend",
-    "merchant_risk_score", "is_fraud",
+    "merchant_risk_score", "is_fraud", "dataset_version",
 }
 
 def dataset_needs_refresh(path: Path) -> bool:
@@ -312,9 +312,15 @@ def train_fraud_model(data: pd.DataFrame):
     )
     target = data["is_fraud"].astype(int)
 
-    x_train, x_test, y_train, y_test = train_test_split(
-        features, target, test_size=0.25, random_state=42, stratify=target
-    )
+    # Chronological hold-out: train on earlier records, evaluate on later ones.
+    # Transaction IDs, customer IDs and post-payment outcomes are excluded.
+    ordered = data.sort_values(["timestamp", "transaction_id"]).index
+    split_at = int(len(ordered) * 0.75)
+    train_idx, test_idx = ordered[:split_at], ordered[split_at:]
+    x_train, x_test = features.loc[train_idx], features.loc[test_idx]
+    y_train, y_test = target.loc[train_idx], target.loc[test_idx]
+    if y_train.nunique() < 2 or y_test.nunique() < 2:
+        raise ValueError("Chronological training/test partitions must contain both classes.")
     model = RandomForestClassifier(
         n_estimators=120,
         max_depth=10,
@@ -334,6 +340,12 @@ def train_fraud_model(data: pd.DataFrame):
         "f1": f1_score(y_test, test_prediction, zero_division=0),
         "roc_auc": roc_auc_score(y_test, test_probability),
         "average_precision": average_precision_score(y_test, test_probability),
+        "baseline_precision": float(y_test.mean()),
+        "brier_score": brier_score_loss(y_test, test_probability),
+        "train_size": len(train_idx),
+        "test_size": len(test_idx),
+        "test_start": data.loc[test_idx, "timestamp"].min(),
+        "train_end": data.loc[train_idx, "timestamp"].max(),
         "test_labels": y_test.to_numpy(),
         "test_probabilities": test_probability,
     }
@@ -341,6 +353,8 @@ def train_fraud_model(data: pd.DataFrame):
     all_probability = model.predict_proba(features)[:, 1]
     scored = data.copy()
     scored["predicted_fraud_risk"] = all_probability
+    scored["score_provenance"] = "Training-data score (in-sample)"
+    scored.loc[test_idx, "score_provenance"] = "Held-out score (out-of-sample)"
     scored["risk_band"] = pd.cut(
         scored["predicted_fraud_risk"],
         bins=[-0.001, 0.30, 0.60, 1.0],
