@@ -128,6 +128,36 @@ div[data-baseweb="select"]>div,div[data-baseweb="input"]>div,div[data-baseweb="t
 [data-testid="stSegmentedControl"] button[aria-checked="true"],[data-testid="stSegmentedControl"] button[aria-pressed="true"]{background:linear-gradient(90deg,#4a2c1f,#2c1f1f);color:#ffc7a8;border-color:#8a4c2f}
 
 @media(max-width:900px){.block-container{padding:1rem .8rem 2rem}.pl-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-insights{grid-template-columns:1fr}.pl-topbar{flex-direction:column;align-items:flex-start}}
+/* Readability, keyboard access, and touch targets */
+:root{--muted:#b9b6be}
+.pl-nav-label{color:#b9b6be}
+.pl-page-sub,.pl-panel-sub,.pl-kpi-note,.pl-row-s,.pl-insight-s,.pl-brand-sub{color:#bab6be}
+[data-testid="stWidgetLabel"] p,[data-testid="stCaptionContainer"] p{color:#bcb9c1}
+.st-key-paylens_page [role="radiogroup"] label{min-height:44px}
+.st-key-paylens_page [role="radiogroup"] label:focus-within,
+div.stButton button:focus-visible,div.stDownloadButton button:focus-visible,
+div.stFormSubmitButton button:focus-visible,
+[data-testid="stExpander"] summary:focus-visible{outline:3px solid #ffc296;outline-offset:3px}
+[data-testid="stSegmentedControl"] button{min-height:40px}
+[data-testid="stSegmentedControl"] button:focus-visible{outline:3px solid #ffc296;outline-offset:2px}
+a{color:#ffbc94}
+a:focus-visible{outline:3px solid #ffc296;outline-offset:3px;border-radius:4px}
+.pl-guide{display:flex;gap:12px;align-items:flex-start;background:linear-gradient(110deg,#221c1c,#1a1a20);border:1px solid #49352c;border-radius:16px;padding:16px 18px;margin:4px 0 20px}
+.pl-guide-mark{font-size:1.1rem;line-height:1.3;color:#ffab76}
+.pl-guide-title{font-weight:650;font-size:.93rem;color:#f7f4f4}
+.pl-guide-copy{font-size:.85rem;line-height:1.6;color:#c6c1c6;margin-top:3px}
+.pl-guide strong{color:#ffe0cd}
+@media(max-width:680px){
+ .block-container{padding:1rem .8rem 2rem}
+ .pl-kpi-grid{grid-template-columns:1fr 1fr;gap:9px}
+ .pl-kpi{padding:13px 12px;border-radius:13px}
+ .pl-kpi-value{font-size:1.35rem;overflow-wrap:anywhere}
+ .pl-guide{padding:13px;gap:8px}
+ .pl-page-title{font-size:1.4rem}
+ .st-key-paylens_page{scrollbar-width:thin}
+}
+@media(max-width:390px){.pl-kpi-grid{grid-template-columns:1fr}}
+
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
 """
 st.markdown(f"<style>{APP_CSS}</style>", unsafe_allow_html=True)
@@ -358,6 +388,16 @@ with st.sidebar:
         min_date = df["timestamp"].min().date()
         max_date = df["timestamp"].max().date()
         date_range = st.date_input("Transaction dates", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+    st.markdown('<div class="pl-nav-label">About this demo</div>', unsafe_allow_html=True)
+    with st.expander("Quick guide and methodology", expanded=False):
+        st.markdown(
+            "**1. Overview** — start with the performance summary.  \\n"
+            "**2. Investigations** — inspect a payment, review cues and record a demo decision.  \\n"
+            "**3. Fraud Intelligence** — adjust the threshold and evaluate held-out predictions.  \\n"
+            "**4. Merchant Risk** — compare merchants and inspect their transactions."
+        )
+        st.caption("Synthetic labels and model scores are educational, not banking decisions.")
+        st.link_button("Read source code", "https://github.com/Mitra-2004/paylens-payment-analytics", use_container_width=True)
     st.caption("Synthetic data · portfolio demonstration")
 
 if isinstance(date_range, tuple) and len(date_range) == 2:
@@ -402,6 +442,16 @@ st.markdown(
 # ---------- Overview ----------
 
 if page == "Overview":
+    st.markdown(
+        '<div class="pl-guide"><div class="pl-guide-mark">✦</div><div>'
+        '<div class="pl-guide-title">A payment network, at a glance</div>'
+        '<div class="pl-guide-copy">Start with the KPIs and trend chart, then open '
+        '<strong>Investigations</strong> to review a transaction or '
+        '<strong>Fraud Intelligence</strong> to examine model trade-offs. '
+        'All transactions are synthetic and all filters affect the figures below.</div>'
+        '</div></div>',
+        unsafe_allow_html=True,
+    )
     total_value = filtered["amount"].sum()
     success_rate = filtered["success"].mean() * 100
     fraud_count = int(filtered["is_fraud"].sum())
@@ -944,4 +994,7 @@ if page == "Transactions":
         st.download_button("Download filtered transactions (CSV)", data=csv, file_name="paylens_filtered_transactions.csv", mime="text/csv")
 
 st.divider()
-st.caption("PayLens is a student portfolio project using reproducible synthetic data. It is not connected to a bank, payment processor or live fraud system.")
+st.caption(
+    "PayLens · Student portfolio demonstration · Synthetic data · No live banking connection. "
+    "Fraud scores are illustrative; held-out model metrics do not establish real-world performance."
+)
