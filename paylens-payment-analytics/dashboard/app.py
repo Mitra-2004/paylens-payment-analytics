@@ -22,17 +22,18 @@ st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳"
 
 st.markdown("""
 <style>
-.stApp {background: radial-gradient(ellipse at 80% 0%, #14294a 0%, #091322 43%, #07101c 100%); color: #eaf2ff;}
-.block-container {padding-top: 1.6rem; padding-bottom: 3rem; max-width: 1450px;}
-[data-testid="stMetric"] {background: linear-gradient(135deg,#132741,#0e1d32); border:1px solid #284462; border-radius:16px; padding:18px; box-shadow:0 7px 22px #00000022;}
-[data-testid="stMetricLabel"] {color:#b4c9de;}
-[data-testid="stMetricValue"] {color:#f3f8ff;}
-[data-testid="stSidebar"] {background:#0d1b2e; border-right:1px solid #263c56;}
-.stTabs [data-baseweb="tab-list"] {gap:8px; flex-wrap:wrap;}
-.stTabs [data-baseweb="tab"] {border-radius:12px; background:#14263d; padding:10px 16px;}
-.stTabs [aria-selected="true"] {background:#146d85; color:white;}
-h1,h2,h3 {letter-spacing:-0.025em;}
-[data-testid="stAlert"] {border-radius:12px;}
+.stApp {background:#0c1421;color:#e9eef5;}
+.block-container {max-width:1400px;padding-top:2rem;padding-bottom:3rem;}
+[data-testid="stSidebar"] {background:#111d2c;border-right:1px solid #263346;}
+[data-testid="stMetric"] {background:#152235;border:1px solid #2b3a4d;border-radius:10px;padding:18px;}
+[data-testid="stMetricLabel"] {color:#aab9cb;}
+[data-testid="stMetricValue"] {color:#f1f5fa;letter-spacing:-.035em;}
+.stTabs [data-baseweb="tab-list"] {gap:0;flex-wrap:wrap;border-bottom:1px solid #334155;}
+.stTabs [data-baseweb="tab"] {background:transparent;border-radius:0;padding:12px 17px;color:#b9c7d8;}
+.stTabs [aria-selected="true"] {color:#f1f5fa;border-bottom:2px solid #59b6ab;}
+h1,h2,h3 {letter-spacing:-.035em;}
+[data-testid="stAlert"] {border-radius:9px;}
+div.stButton button,div.stDownloadButton button {border-radius:8px;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -40,9 +41,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = PROJECT_ROOT / "data" / "payments.csv"
 GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
 
-st.title("💳 PayLens | Intelligence Console")
-st.caption("PAYMENT OPERATIONS  /  FRAUD INTELLIGENCE  /  BUSINESS ANALYTICS")
-st.info("🧪 Public demo • 25,000 synthetic transactions • No real customer or banking data")
+st.title("PayLens")
+st.caption("Payment intelligence, without the noise.")
+st.caption("PUBLIC DEMO  ·  SYNTHETIC DATA  ·  NO LIVE BANKING CONNECTION")
 
 REQUIRED_COLUMNS = {
     "transaction_id", "timestamp", "customer_id", "merchant_id",
@@ -140,7 +141,7 @@ df = load_data(str(DATA_FILE), file_modified)
 scored_df, model_metrics, feature_importance = train_fraud_model(df)
 
 with st.sidebar:
-    st.header("🎛️ Control Center")
+    st.header("Filters")
     st.caption("Explore the synthetic payment network")
     selected_regions = st.multiselect("Region", sorted(df["region"].unique()), default=sorted(df["region"].unique()))
     selected_categories = st.multiselect("Category", sorted(df["category"].unique()), default=sorted(df["category"].unique()))
@@ -180,7 +181,7 @@ tab_overview, tab_fraud, tab_merchants, tab_customers, tab_explorer = st.tabs(
 )
 
 with tab_overview:
-    st.subheader("📊 Executive Overview")
+    st.subheader("Overview")
     st.caption("Explore regional performance, payment trends and operational KPIs. All figures reflect your active filters.")
     total_value = filtered["amount"].sum()
     success_rate = filtered["success"].mean() * 100
@@ -203,9 +204,12 @@ with tab_overview:
         st.plotly_chart(px.bar(category_volume, x="category", y="size", title="Number of transactions"), use_container_width=True)
 
     daily = filtered.set_index("timestamp").resample("D").agg(transaction_count=("transaction_id", "count"), transaction_value=("amount", "sum")).reset_index()
+    trend_metric = st.radio("Trend view", ["Transaction volume", "Transaction value"], horizontal=True, key="overview_trend")
+    trend_column = "transaction_count" if trend_metric == "Transaction volume" else "transaction_value"
+    trend_title = "Daily transaction volume" if trend_metric == "Transaction volume" else "Daily transaction value (₹)"
     st.markdown("**Payment activity over time**")
-    st.plotly_chart(px.line(daily, x="timestamp", y="transaction_count", title="Daily transaction volume", markers=True), use_container_width=True)
-    st.markdown("#### 💡 Executive highlights")
+    st.plotly_chart(px.line(daily, x="timestamp", y=trend_column, title=trend_title, markers=True), use_container_width=True)
+    st.markdown("#### What stands out")
     top_region = region_value.iloc[0]
     top_category = category_volume.iloc[0]
     a, b, c = st.columns(3)
@@ -222,7 +226,7 @@ with tab_overview:
         f"Top category by volume: {top_category['category']}\n"
         "This report uses simulated transactions and is not a real-world fraud assessment.\n"
     )
-    st.download_button("📥 Export executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
+    st.download_button("Download executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
 
 with tab_fraud:
     st.subheader("Fraud Intelligence")
@@ -304,6 +308,9 @@ with tab_fraud:
         st.markdown("**Most influential model features**")
         st.plotly_chart(px.bar(feature_importance.sort_values("importance"), x="importance", y="feature", orientation="h", title="Random Forest feature importance"), use_container_width=True)
 
+    with st.expander("How to interpret these results"):
+        st.write("Lower thresholds catch more potentially fraudulent transactions but may create more false alarms. Higher thresholds reduce reviews but can miss fraud cases. Compare held-out test metrics before deciding.")
+
     st.markdown("**High-risk transaction queue**")
     display_cols = ["transaction_id", "timestamp", "customer_id", "merchant_id", "amount", "region", "category", "predicted_fraud_risk", "risk_band", "is_fraud"]
     st.dataframe(high_risk[display_cols].head(100), use_container_width=True, hide_index=True)
@@ -359,7 +366,7 @@ with tab_customers:
     st.dataframe(customer_summary.sort_values("lifetime_value", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
 
 with tab_explorer:
-    st.subheader("🔎 Transaction Data Explorer")
+    st.subheader("Transaction explorer")
     search_id = st.text_input("Find a transaction by ID", placeholder="e.g. 1042")
     if search_id.strip():
         if search_id.strip().isdigit():
