@@ -47,6 +47,15 @@ div.stButton button:hover,div.stDownloadButton button:hover{transform:translateY
 div[data-baseweb="select"]>div{border-radius:10px}
 @media(max-width:850px){.block-container{padding:1rem .75rem 2rem}[data-testid="stMetric"]{padding:12px;min-height:95px}.stTabs [data-baseweb="tab"]{padding:8px 10px}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+
+/* Sidebar navigation: compact, modern selectable rows */
+[data-testid="stSidebar"] [role="radiogroup"]{gap:6px}
+[data-testid="stSidebar"] [role="radiogroup"] label{border:1px solid transparent;padding:10px 11px;border-radius:11px;transition:background .2s ease,border-color .2s ease;cursor:pointer}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#2a2525;border-color:#3e3330}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:linear-gradient(90deg,#553226,#292224);border-color:#754634;box-shadow:inset 3px 0 #ff762f,0 0 16px #ff762f0b}
+[data-testid="stSidebar"] [role="radiogroup"] label [data-testid="stMarkdownContainer"] p{font-size:.92rem}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:#ffbe94;font-weight:650}
+[data-testid="stSidebar"] [role="radiogroup"] [data-baseweb="radio"]>div:first-child{display:none}
 </style>
 """, unsafe_allow_html=True)
 
@@ -155,26 +164,34 @@ df = load_data(str(DATA_FILE), file_modified)
 scored_df, model_metrics, feature_importance = train_fraud_model(df)
 
 with st.sidebar:
-    st.markdown("### 🟠 PayLens")
+    st.markdown("### <span style=\\"color:#ff762f\\">◈</span> PayLens", unsafe_allow_html=True)
     st.caption("INTELLIGENCE WORKSPACE")
     st.divider()
-    st.header("Filters")
-    st.caption("Explore the synthetic payment network")
-    selected_regions = st.multiselect("Region", sorted(df["region"].unique()), default=sorted(df["region"].unique()))
-    selected_categories = st.multiselect("Category", sorted(df["category"].unique()), default=sorted(df["category"].unique()))
-    selected_methods = st.multiselect(
-        "Payment method", sorted(df["payment_method"].unique()),
-        default=sorted(df["payment_method"].unique()),
+    st.markdown("##### WORKSPACE")
+    page = st.radio(
+        "Workspace",
+        ["Overview", "Investigations", "Fraud Intelligence", "Merchant Risk", "Customer Insights", "Transactions"],
+        label_visibility="collapsed",
+        key="paylens_page",
     )
-    min_amount, max_amount = float(df["amount"].min()), float(df["amount"].max())
-    amount_range = st.slider(
-        "Transaction amount (₹)", min_value=0.0,
-        max_value=float(np.ceil(max_amount)), value=(0.0, float(np.ceil(max_amount))),
-    )
-    min_date = df["timestamp"].min().date()
-    max_date = df["timestamp"].max().date()
-    date_range = st.date_input("Transaction dates", value=(min_date, max_date), min_value=min_date, max_value=max_date)
-    st.caption("All transactions are synthetic and intended for portfolio demonstration.")
+    st.divider()
+    st.markdown("##### FILTER TRANSACTIONS")
+    with st.expander("Refine your view", expanded=False):
+        selected_regions = st.multiselect("Region", sorted(df["region"].unique()), default=sorted(df["region"].unique()))
+        selected_categories = st.multiselect("Category", sorted(df["category"].unique()), default=sorted(df["category"].unique()))
+        selected_methods = st.multiselect(
+            "Payment method", sorted(df["payment_method"].unique()),
+            default=sorted(df["payment_method"].unique()),
+        )
+        min_amount, max_amount = float(df["amount"].min()), float(df["amount"].max())
+        amount_range = st.slider(
+            "Transaction amount (₹)", min_value=0.0,
+            max_value=float(np.ceil(max_amount)), value=(0.0, float(np.ceil(max_amount))),
+        )
+        min_date = df["timestamp"].min().date()
+        max_date = df["timestamp"].max().date()
+        date_range = st.date_input("Transaction dates", value=(min_date, max_date), min_value=min_date, max_value=max_date)
+    st.caption("Synthetic data · portfolio demonstration")
 
 if isinstance(date_range, tuple) and len(date_range) == 2:
     start_date, end_date = date_range
@@ -193,11 +210,9 @@ if filtered.empty:
     st.warning("No transactions match these filters. Adjust the filters in the sidebar.")
     st.stop()
 
-tab_overview, tab_investigate, tab_fraud, tab_merchants, tab_customers, tab_explorer = st.tabs(
-    ["Overview", "Investigations", "Fraud model", "Merchants", "Customers", "Transactions"]
-)
+st.caption(f"WORKSPACE / {page.upper()}     ·     {len(filtered):,} MATCHING TRANSACTIONS")
 
-with tab_overview:
+if page == "Overview":
     st.subheader("Overview")
     st.caption("Explore regional performance, payment trends and operational KPIs. All figures reflect your active filters.")
     total_value = filtered["amount"].sum()
@@ -330,7 +345,7 @@ with tab_overview:
     st.download_button("Download executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
 
 
-with tab_investigate:
+if page == "Investigations":
     st.subheader("Transaction investigations")
     st.caption("Explore a simulated payment, its merchant context and model score. Investigation notes are saved only for this browser session.")
     queue = filtered.sort_values("predicted_fraud_risk", ascending=False)
@@ -448,7 +463,7 @@ with tab_investigate:
         )
     st.caption("Session-only notes are not shared or persisted. This is a demonstration workflow, not a production case-management system.")
 
-with tab_fraud:
+if page == "Fraud Intelligence":
     st.subheader("Fraud Intelligence")
     st.caption("Random Forest on synthetic fraud labels. Test metrics use held-out transactions; transaction queue scores include in-sample predictions and are illustrative, not independently validated.")
     f1, f2, f3, f4, f5 = st.columns(5)
@@ -536,7 +551,7 @@ with tab_fraud:
     st.dataframe(high_risk[display_cols].head(100), use_container_width=True, hide_index=True)
     st.caption("The is_fraud column is the synthetic ground-truth label included only to evaluate this demonstration dataset.")
 
-with tab_merchants:
+if page == "Merchant Risk":
     st.subheader("Merchant Risk & Performance")
     merchant_summary = filtered.groupby("merchant_id").agg(
         transactions=("transaction_id", "count"),
@@ -562,7 +577,7 @@ with tab_merchants:
     st.markdown("**Merchant scorecard**")
     st.dataframe(merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
 
-with tab_customers:
+if page == "Customer Insights":
     st.subheader("Customer Insights")
     customer_summary = filtered.groupby("customer_id").agg(
         transactions=("transaction_id", "count"),
@@ -585,7 +600,7 @@ with tab_customers:
         st.plotly_chart(px.pie(segments, names="activity_segment", values="customers", title="Customer segmentation"), use_container_width=True)
     st.dataframe(customer_summary.sort_values("lifetime_value", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
 
-with tab_explorer:
+if page == "Transactions":
     st.subheader("Transaction explorer")
     search_id = st.text_input("Find a transaction by ID", placeholder="e.g. 1042")
     if search_id.strip():
