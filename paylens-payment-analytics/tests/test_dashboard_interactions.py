@@ -32,9 +32,16 @@ class DashboardWorkflowTests(unittest.TestCase):
         app = shap_button.click().run()
         self.assertFalse(app.exception, f"SHAP calculation errors: {app.exception}")
         self.assertFalse(app.error, f"SHAP displayed an error: {app.error}")
-        self.assertTrue(
-            any("Baseline model score:" in str(markdown.value) for markdown in app.markdown),
-            "SHAP calculation did not render its baseline and contributions.",
+        selected = next(select for select in app.selectbox if select.label == "Select transaction")
+        data_file = APP.parents[1] / "data" / "payments.csv"
+        explanation_key = (
+            f"shap_explanation_{int(selected.value)}_{int(data_file.stat().st_mtime)}"
+        )
+        baseline, prediction, contributions = app.session_state[explanation_key]
+        self.assertAlmostEqual(
+            float(baseline) + float(contributions["contribution"].sum()),
+            float(prediction),
+            places=4,
         )
 
         status_control = next(select for select in app.selectbox if select.label == "Decision")
