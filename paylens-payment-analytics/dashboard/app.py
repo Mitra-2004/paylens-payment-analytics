@@ -1,6 +1,7 @@
 from html import escape
 from pathlib import Path
 import runpy
+import sys
 
 import numpy as np
 import pandas as pd
@@ -164,12 +165,13 @@ a:focus-visible{outline:3px solid #ffc296;outline-offset:3px;border-radius:4px}
 """
 st.markdown(f"<style>{APP_CSS}</style>", unsafe_allow_html=True)
 
-PAGES = ["Overview", "Investigations", "Fraud Intelligence", "Merchant Risk", "Customer Insights", "Transactions"]
+PAGES = ["Overview", "Investigations", "Fraud Intelligence", "Merchant Risk", "Network Intelligence", "Customer Insights", "Transactions"]
 PAGE_ICONS = {
     "Overview": "▦",
     "Investigations": "⌕",
     "Fraud Intelligence": "⚑",
     "Merchant Risk": "◫",
+    "Network Intelligence": "◎",
     "Customer Insights": "◔",
     "Transactions": "≡",
 }
@@ -178,11 +180,18 @@ PAGE_META = {
     "Investigations": ("Investigations", "Review suspicious payments, trace related activity, and document decisions. Changes remain in this browser session."),
     "Fraud Intelligence": ("Fraud Intelligence", "Random Forest on synthetic fraud labels. Test metrics use held-out transactions; transaction queue scores include in-sample predictions and are illustrative, not independently validated."),
     "Merchant Risk": ("Merchant intelligence", "Identify concentrated exposure, compare merchant performance and investigate individual merchant profiles."),
+    "Network Intelligence": ("Network intelligence", "Explore observed customer–merchant links and repeated payment activity, without inferring fraud."),
     "Customer Insights": ("Customer insights", "Understand where customer value concentrates and how often customers transact under your active filters."),
     "Transactions": ("Transaction explorer", "Search, filter and export individual payment records."),
 }
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+from src.network_analytics import (
+    merchant_connections, network_summary, merchant_customer_overlap,
+)
+
 DATA_FILE = PROJECT_ROOT / "data" / "payments.csv"
 GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
 
@@ -1138,6 +1147,87 @@ if page == "Merchant Risk":
         st.dataframe(
             merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2),
             use_container_width=True, hide_index=True,
+        )
+
+
+# ---------- Network Intelligence ----------
+
+if page == "Network Intelligence":
+    summary = network_summary(filtered)
+    kpi_row([
+        ("Active customers", f"{summary['customers']:,}", "Distinct synthetic customer IDs"),
+        ("Active merchants", f"{summary['merchants']:,}", "Distinct synthetic merchant IDs"),
+        ("Customer–merchant links", f"{summary['unique_links']:,}", "Unique observed pairs"),
+        ("Repeated relationships", f"{summary['repeat_links']:,}", "Pairs with 2+ transactions"),
+    ])
+    with st.container(border=True):
+        panel_header(
+            "Repeated payment relationships",
+            "Observed repeat interactions, not automatically suspicious behavior",
+            "◎",
+        )
+        minimum = st.slider(
+            "Minimum transactions per customer–merchant pair", 2, 10, 2,
+            help="A repeat payment relationship is an observed pair, not evidence of coordinated activity.",
+        )
+        connections = merchant_connections(filtered, min_transactions=minimum)
+        st.caption(
+            f"{len(connections):,} customer–merchant relationships meet this threshold. "
+            "Counts reflect your active global filters."
+        )
+        if connections.empty:
+            st.info("No repeated relationships match this threshold. Lower it or broaden the filters.")
+        else:
+            st.dataframe(
+                connections.head(100), hide_index=True, use_container_width=True,
+                column_config={
+                    "avg_model_score": st.column_config.NumberColumn(
+                        "Average illustrative model score", format="%.3f"
+                    ),
+                    "total_value": st.column_config.NumberColumn(
+                        "Transaction value (₹)", format="₹%.2f"
+                    ),
+                },
+            )
+            st.download_button(
+                "Export repeated relationships",
+                connections.to_csv(index=False).encode("utf-8"),
+                file_name="paylens_network_relationships.csv", mime="text/csv",
+            )
+    with st.container(border=True):
+        panel_header(
+            "Merchant audience overlap",
+            "Compare merchants with customers observed at both businesses",
+            "◫",
+        )
+        available_merchants = sorted(filtered["merchant_id"].unique().tolist())
+        focus_merchant = st.selectbox(
+            "Select a merchant", available_merchants,
+            format_func=lambda mid: f"Merchant M-{int(mid):04d}",
+            key="network_merchant",
+        )
+        overlap = merchant_customer_overlap(filtered, focus_merchant)
+        if overlap.empty:
+            st.info("No overlapping customer relationships for this merchant under the active filters.")
+        else:
+            top_overlap = overlap.head(15)
+            overlap_chart = px.bar(
+                top_overlap.sort_values("shared_customers"),
+                x="shared_customers", y="merchant_id", orientation="h",
+                labels={
+                    "shared_customers": "Customers observed at both merchants",
+                    "merchant_id": "Other merchant",
+                },
+            )
+            overlap_chart.update_yaxes(type="category")
+            overlap_chart.update_traces(marker_color=ACCENT)
+            style_fig(overlap_chart, height=340)
+            st.plotly_chart(overlap_chart, use_container_width=True, config=PLOT_CONFIG)
+            st.dataframe(top_overlap, hide_index=True, use_container_width=True)
+        st.caption(
+            "Shared customers are expected in payment networks. "
+            "No identity linkage beyond synthetic IDs, graph anomaly detection, "
+            "or fraud inference is claimed."
         )
 
 
