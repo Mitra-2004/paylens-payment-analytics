@@ -752,6 +752,26 @@ if page == "Fraud Intelligence":
         ("ROC-AUC", f"{model_metrics['roc_auc']:.3f}", "Held-out test set"),
     ])
 
+    with st.expander("Model validation and limitations", expanded=True):
+        st.markdown(
+            f"**Validation:** Chronological holdout — {model_metrics['train_size']:,} older transactions "
+            f"for training and {model_metrics['test_size']:,} newer transactions for evaluation. "
+            f"Training data ends **{model_metrics['train_end']:%d %b %Y}**; "
+            f"the test period starts **{model_metrics['test_start']:%d %b %Y}**."
+        )
+        st.markdown(
+            f"**Fraud prevalence / random-ranking average-precision baseline:** "
+            f"{model_metrics['baseline_precision']:.2%}  ·  "
+            f"**Model average precision:** {model_metrics['average_precision']:.3f}  ·  "
+            f"**Brier score (lower is better):** {model_metrics['brier_score']:.4f}"
+        )
+        st.caption(
+            "The synthetic fraud labels are created from engineered signals, so strong results "
+            "would demonstrate pattern recovery—not real-world fraud detection. "
+            "Features exclude transaction IDs, customer IDs, fraud labels and payment success. "
+            "Scores on older training records are in-sample; newer test scores are out-of-sample."
+        )
+
     with st.container(border=True):
         panel_header("Threshold analysis", "Classification threshold on the held-out test set", "⚑")
         threshold = st.slider("Fraud alert threshold", min_value=0.05, max_value=0.95, value=0.50, step=0.05)
@@ -835,9 +855,9 @@ if page == "Fraud Intelligence":
 
     with st.container(border=True):
         panel_header("High-risk transaction queue", "Top transactions in the High risk band", "⚑")
-        display_cols = ["transaction_id", "timestamp", "customer_id", "merchant_id", "amount", "region", "category", "predicted_fraud_risk", "risk_band", "is_fraud"]
+        display_cols = ["transaction_id", "timestamp", "customer_id", "merchant_id", "amount", "region", "category", "predicted_fraud_risk", "risk_band", "score_provenance", "is_fraud"]
         st.dataframe(high_risk[display_cols].head(100), use_container_width=True, hide_index=True)
-        st.caption("The is_fraud column is the synthetic ground-truth label included only to evaluate this demonstration dataset.")
+        st.caption("Ground-truth labels are synthetic. Use score_provenance to distinguish in-sample from genuinely held-out predictions.")
 
 
 # ---------- Merchant Risk ----------
