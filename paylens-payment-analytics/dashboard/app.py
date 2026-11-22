@@ -737,7 +737,7 @@ if page == "Investigations":
                     "establish real-world fraud probability."
                 )
                 # Persist the last selected explanation through Streamlit reruns.
-                explanation_key = f"shap_explanation_{int(selected_id)}"
+                explanation_key = f"shap_explanation_{int(selected_id)}_{int(file_modified)}"
                 if st.button("Calculate SHAP explanation", key=f"shap_tx_{int(selected_id)}"):
                     try:
                         with st.spinner("Calculating feature contributions..."):
@@ -1016,7 +1016,7 @@ if page == "Merchant Risk":
     merchant_summary["payment_success_rate"] *= 100
     merchant_summary["observed_fraud_rate"] *= 100
     merchant_summary["predicted_risk"] *= 100
-    merchant_summary["risk_tier"] = pd.cut(merchant_summary["predicted_risk"], [-0.01, 2, 5, 100], labels=["Low", "Medium", "High"])
+    merchant_summary["risk_tier"] = pd.cut(merchant_summary["predicted_risk"], [-0.01, 10, 25, 100], labels=["Low", "Medium", "High"])
 
     kpi_row([
         ("Merchants in view", f"{len(merchant_summary):,}", "Under active filters"),
