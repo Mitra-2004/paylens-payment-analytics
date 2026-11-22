@@ -952,9 +952,9 @@ if page == "Fraud Intelligence":
             for cutoff in [0.05, 0.10, 0.15, 0.20, 0.25, 0.35, 0.50]:
                 flags = (test_probabilities >= cutoff).astype(int)
                 tradeoff_rows.append({
-                    "Threshold": cutoff,
-                    "Precision": precision_score(test_labels, flags, zero_division=0),
-                    "Recall": recall_score(test_labels, flags, zero_division=0),
+                    "Threshold": cutoff * 100,
+                    "Precision": precision_score(test_labels, flags, zero_division=0) * 100,
+                    "Recall": recall_score(test_labels, flags, zero_division=0) * 100,
                     "Flagged": int(flags.sum()),
                     "False alerts": int(((flags == 1) & (test_labels == 0)).sum()),
                 })
