@@ -405,9 +405,9 @@ if quality_issues:
 scored_df, model_metrics, feature_importance, fraud_model, model_feature_columns = train_fraud_model(df)
 
 @st.cache_resource(show_spinner=False)
-def fraud_shap_explainer(model):
-    """Explain raw model class outputs; no live data leaves the app."""
-    return shap.TreeExplainer(model)
+def fraud_shap_explainer(_model, model_cache_key: tuple):
+    """Cache the explainer by model identity and dataset version, not the unhashable estimator."""
+    return shap.TreeExplainer(_model)
 
 
 def explain_transaction(row: pd.Series, model, model_columns: list[str]):
@@ -417,7 +417,7 @@ def explain_transaction(row: pd.Series, model, model_columns: list[str]):
     one = pd.DataFrame([row[numeric + categorical].to_dict()])
     encoded = pd.get_dummies(one, columns=categorical, dtype=int)
     encoded = encoded.reindex(columns=model_columns, fill_value=0)
-    explainer = fraud_shap_explainer(model)
+    explainer = fraud_shap_explainer(model, (file_modified, id(model)))
     shap_result = explainer.shap_values(encoded)
     if isinstance(shap_result, list):
         contributions = np.asarray(shap_result[1])[0]
