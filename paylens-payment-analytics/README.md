@@ -137,6 +137,10 @@ These are manual browser checks; passing Python unit tests alone does not prove 
 
 Case notes are temporary per session and intentionally not a production data store. If any control fails, capture the visible error and check the Streamlit deployment logs.
 
+## Product quality and accessibility review
+
+The [product-quality audit](../docs/product-quality-audit.md) documents code-level accessibility improvements, UI consistency, cross-workspace drill-downs, automated Streamlit interactions and remaining browser checks. This is **not** a claim of WCAG conformance. Full Streamlit Cloud keyboard, mobile, CSV-download and screen-reader verification remain manual.
+
 ## Data quality and usability safeguards
 
 The Streamlit app checks its CSV at startup and regenerates the reproducible synthetic dataset if the schema, version, timestamps or required fields are invalid. Filters support region, category, payment method, amount, date and illustrative risk band. An empty result set produces an explanatory message instead of showing misleading charts.
