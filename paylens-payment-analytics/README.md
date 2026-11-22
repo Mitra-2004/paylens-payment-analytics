@@ -47,14 +47,22 @@
 - Observed synthetic fraud rate and average predicted risk
 - Merchant comparison, merchant-specific drill-down, transaction history, concise evidence-based performance brief and portfolio scorecard
 
-### 5. Customer insights
+### 5. Network intelligence
+- Summarize distinct customers, merchants, and observed customer–merchant links
+- Review repeated customer–merchant payment relationships with an adjustable minimum transaction count
+- Explore merchants that share customers within the selected synthetic dataset
+- Export observed repeat relationships to CSV
+- Network observations are descriptive; overlapping customers and repeat payments are **not inherently fraudulent**
+
+### 6. Customer insights
 - Customer transaction value and frequency
 - Average ticket size and payment success rate
 - One-time, occasional and frequent customer segments
 
-### 6. Transaction explorer
-- Filtered transaction table
-- CSV export for further analysis
+### 7. Transaction explorer
+- Search by transaction ID under active filters
+- Sort and paginate transaction records without arbitrary 500-row truncation
+- Export all matching records to CSV, not only the displayed page
 
 ## Tech stack
 
@@ -63,6 +71,7 @@
 - Scikit-learn (Random Forest)
 - Streamlit
 - Plotly
+- SHAP (on-demand local explanations)
 
 ## Project structure
 
@@ -74,6 +83,8 @@ paylens-payment-analytics/
 │   └── payments.csv          # generated locally / at first app launch
 ├── src/
 │   ├── analytics.py
+│   ├── data_quality.py
+│   ├── network_analytics.py
 │   └── generate_data.py
 ├── requirements.txt
 └── README.md
@@ -111,7 +122,7 @@ From the inner `paylens-payment-analytics/` directory:
 python -m unittest discover -s tests -v
 ```
 
-The tests regenerate the deterministic sample, check required columns, transaction IDs, binary fields, timestamp/hour/weekend consistency, dataset version and chronological split boundaries.
+The tests regenerate the deterministic sample and check schema, identifiers, binary fields, timestamp/hour/weekend consistency, dataset version, chronological holdout boundaries, network summaries, and data-quality error cases. GitHub Actions runs these checks on pushes.
 
 ## Live demo verification
 
@@ -125,6 +136,12 @@ These are manual browser checks; passing Python unit tests alone does not prove 
 6. In **Merchant Risk**, choose a merchant and inspect the evidence-based business brief.
 
 Case notes are temporary per session and intentionally not a production data store. If any control fails, capture the visible error and check the Streamlit deployment logs.
+
+## Data quality and usability safeguards
+
+The Streamlit app checks its CSV at startup and regenerates the reproducible synthetic dataset if the schema, version, timestamps or required fields are invalid. Filters support region, category, payment method, amount, date and illustrative risk band. An empty result set produces an explanatory message instead of showing misleading charts.
+
+**Known limits:** Case notes persist only for the current Streamlit session. SHAP computation is performed on demand and may be slower on first use. The app does not establish real-world fraud performance or provide actual connected payment-network information.
 
 ## Future improvements
 
