@@ -185,6 +185,24 @@ div.stButton button[kind="primary"],div.stFormSubmitButton button[kind="primary"
  .pl-panel-sub,.pl-kpi-note,.pl-page-sub{color:#e4e0e4}
 }
 
+/* Semantic heading rhythm and accessible navigation */
+.pl-page-title{margin:0;line-height:1.2}
+.pl-panel-title{margin:0;line-height:1.35}
+.st-key-paylens_page [role="radiogroup"] [data-baseweb="radio"]>div:first-child{
+ display:block;position:absolute;opacity:0;pointer-events:none;width:1px;height:1px;overflow:hidden;
+}
+.st-key-paylens_page [role="radiogroup"] label{position:relative}
+.st-key-paylens_page [role="radiogroup"] label:focus-within{
+ outline:3px solid #ffcbab!important;outline-offset:2px;
+}
+[data-testid="stDataFrame"] :focus-visible{outline:3px solid #ffcbab;outline-offset:1px}
+@media(max-width:700px){
+ .pl-txn-head{flex-wrap:wrap}
+ .pl-row{align-items:flex-start;flex-wrap:wrap}
+ .pl-row-v{white-space:normal;overflow-wrap:anywhere}
+ .pl-insight-v{overflow-wrap:anywhere}
+}
+
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
 """
 st.markdown(f"<style>{APP_CSS}</style>", unsafe_allow_html=True)
@@ -242,7 +260,7 @@ def kpi_row(items, compact=False):
 def panel_header(title, subtitle, icon):
     st.markdown(
         f'<div class="pl-panel-head"><div class="pl-chip" aria-hidden="true">{escape(icon)}</div>'
-        f'<div><div class="pl-panel-title">{escape(title)}</div>'
+        f'<div><h2 class="pl-panel-title">{escape(title)}</h2>'
         f'<div class="pl-panel-sub">{escape(subtitle)}</div></div></div>',
         unsafe_allow_html=True,
     )
@@ -553,7 +571,7 @@ page = st.radio(
 page_title, page_subtitle = PAGE_META[page]
 subtitle_html = f'<div class="pl-page-sub">{escape(page_subtitle)}</div>' if page_subtitle else ""
 st.markdown(
-    f'<div class="pl-topbar"><div><div class="pl-page-title">{escape(page_title)}</div>{subtitle_html}</div>'
+    f'<div class="pl-topbar"><div><h1 class="pl-page-title">{escape(page_title)}</h1>{subtitle_html}</div>'
     f'<div class="pl-status">{len(filtered):,} matching transactions</div></div>',
     unsafe_allow_html=True,
 )
