@@ -163,6 +163,11 @@ file_modified = DATA_FILE.stat().st_mtime
 df = load_data(str(DATA_FILE), file_modified)
 scored_df, model_metrics, feature_importance = train_fraud_model(df)
 
+def navigate_to(destination: str) -> None:
+    """Switch workspace from a button callback before Streamlit redraws widgets."""
+    st.session_state["paylens_page"] = destination
+
+
 with st.sidebar:
     st.markdown('### <span style="color:#ff762f">◈</span> PayLens', unsafe_allow_html=True)
     st.caption("INTELLIGENCE WORKSPACE")
@@ -314,6 +319,11 @@ if page == "Overview":
                 },
             )
             st.caption("Scores are illustrative; they include in-sample model predictions.")
+            st.button(
+                "Open investigations", type="primary",
+                on_click=navigate_to, args=("Investigations",),
+                use_container_width=True,
+            )
 
     with st.expander("Explore regional and category performance"):
         breakdown_left, breakdown_right = st.columns(2)
