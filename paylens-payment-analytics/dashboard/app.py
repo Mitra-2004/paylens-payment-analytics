@@ -215,7 +215,36 @@ with tab_fraud:
         st.markdown("**Precision–recall curve (held-out test set)**")
         pr_precision, pr_recall, _ = precision_recall_curve(test_labels, test_probabilities)
         pr_frame = pd.DataFrame({"Recall": pr_recall, "Precision": pr_precision})
-        st.plotly_chart(px.line(pr_frame, x="Recall", y="Precision", title="Precision vs. recall"), use_container_width=True)
+        selected_precision = precision_score(test_labels, threshold_predictions, zero_division=0)
+        selected_recall = recall_score(test_labels, threshold_predictions, zero_division=0)
+        pr_chart = px.line(
+            pr_frame,
+            x="Recall",
+            y="Precision",
+            title="Precision–recall curve and selected threshold",
+            labels={"Recall": "Recall", "Precision": "Precision"},
+        )
+        pr_chart.add_scatter(
+            x=[selected_recall],
+            y=[selected_precision],
+            mode="markers+text",
+            marker={"size": 14, "color": "#ef4444", "symbol": "circle"},
+            text=[f"Threshold {threshold:.2f}"],
+            textposition="top center",
+            name="Selected threshold",
+            hovertemplate=(
+                f"Threshold: {threshold:.2f}<br>"
+                f"Precision: {selected_precision:.3f}<br>"
+                f"Recall: {selected_recall:.3f}<extra></extra>"
+            ),
+        )
+        pr_chart.update_layout(xaxis_range=[0, 1.02], yaxis_range=[0, 1.05])
+        st.plotly_chart(pr_chart, use_container_width=True)
+        st.caption(
+            f"Selected threshold {threshold:.2f}: "
+            f"precision {selected_precision:.1%}, recall {selected_recall:.1%}. "
+            "The full curve stays fixed because it represents all possible thresholds."
+        )
 
     high_risk = filtered[filtered["risk_band"] == "High"].sort_values("predicted_fraud_risk", ascending=False)
     left, right = st.columns(2)
