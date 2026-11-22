@@ -20,12 +20,29 @@ from sklearn.model_selection import train_test_split
 
 st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳", layout="wide")
 
+st.markdown("""
+<style>
+.stApp {background: radial-gradient(ellipse at 80% 0%, #14294a 0%, #091322 43%, #07101c 100%); color: #eaf2ff;}
+.block-container {padding-top: 1.6rem; padding-bottom: 3rem; max-width: 1450px;}
+[data-testid="stMetric"] {background: linear-gradient(135deg,#132741,#0e1d32); border:1px solid #284462; border-radius:16px; padding:18px; box-shadow:0 7px 22px #00000022;}
+[data-testid="stMetricLabel"] {color:#b4c9de;}
+[data-testid="stMetricValue"] {color:#f3f8ff;}
+[data-testid="stSidebar"] {background:#0d1b2e; border-right:1px solid #263c56;}
+.stTabs [data-baseweb="tab-list"] {gap:8px; flex-wrap:wrap;}
+.stTabs [data-baseweb="tab"] {border-radius:12px; background:#14263d; padding:10px 16px;}
+.stTabs [aria-selected="true"] {background:#146d85; color:white;}
+h1,h2,h3 {letter-spacing:-0.025em;}
+[data-testid="stAlert"] {border-radius:12px;}
+</style>
+""", unsafe_allow_html=True)
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = PROJECT_ROOT / "data" / "payments.csv"
 GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
 
-st.title("💳 PayLens")
-st.caption("Payment Network Intelligence • Analytics, fraud detection and merchant risk")
+st.title("💳 PayLens | Intelligence Console")
+st.caption("PAYMENT OPERATIONS  /  FRAUD INTELLIGENCE  /  BUSINESS ANALYTICS")
+st.info("🧪 Public demo • 25,000 synthetic transactions • No real customer or banking data")
 
 REQUIRED_COLUMNS = {
     "transaction_id", "timestamp", "customer_id", "merchant_id",
@@ -123,9 +140,19 @@ df = load_data(str(DATA_FILE), file_modified)
 scored_df, model_metrics, feature_importance = train_fraud_model(df)
 
 with st.sidebar:
-    st.header("Explore data")
+    st.header("🎛️ Control Center")
+    st.caption("Explore the synthetic payment network")
     selected_regions = st.multiselect("Region", sorted(df["region"].unique()), default=sorted(df["region"].unique()))
     selected_categories = st.multiselect("Category", sorted(df["category"].unique()), default=sorted(df["category"].unique()))
+    selected_methods = st.multiselect(
+        "Payment method", sorted(df["payment_method"].unique()),
+        default=sorted(df["payment_method"].unique()),
+    )
+    min_amount, max_amount = float(df["amount"].min()), float(df["amount"].max())
+    amount_range = st.slider(
+        "Transaction amount (₹)", min_value=0.0,
+        max_value=float(np.ceil(max_amount)), value=(0.0, float(np.ceil(max_amount))),
+    )
     min_date = df["timestamp"].min().date()
     max_date = df["timestamp"].max().date()
     date_range = st.date_input("Transaction dates", value=(min_date, max_date), min_value=min_date, max_value=max_date)
@@ -139,6 +166,8 @@ else:
 filtered = scored_df[
     scored_df["region"].isin(selected_regions)
     & scored_df["category"].isin(selected_categories)
+    & scored_df["payment_method"].isin(selected_methods)
+    & scored_df["amount"].between(*amount_range)
     & scored_df["timestamp"].dt.date.between(start_date, end_date)
 ].copy()
 
@@ -151,7 +180,8 @@ tab_overview, tab_fraud, tab_merchants, tab_customers, tab_explorer = st.tabs(
 )
 
 with tab_overview:
-    st.subheader("Executive Overview")
+    st.subheader("📊 Executive Overview")
+    st.caption("Explore regional performance, payment trends and operational KPIs. All figures reflect your active filters.")
     total_value = filtered["amount"].sum()
     success_rate = filtered["success"].mean() * 100
     fraud_count = int(filtered["is_fraud"].sum())
@@ -174,7 +204,25 @@ with tab_overview:
 
     daily = filtered.set_index("timestamp").resample("D").agg(transaction_count=("transaction_id", "count"), transaction_value=("amount", "sum")).reset_index()
     st.markdown("**Payment activity over time**")
-    st.plotly_chart(px.line(daily, x="timestamp", y="transaction_count", title="Daily transaction volume"), use_container_width=True)
+    st.plotly_chart(px.line(daily, x="timestamp", y="transaction_count", title="Daily transaction volume", markers=True), use_container_width=True)
+    st.markdown("#### 💡 Executive highlights")
+    top_region = region_value.iloc[0]
+    top_category = category_volume.iloc[0]
+    a, b, c = st.columns(3)
+    a.info(f"**Top region:** {top_region['region']} — ₹{top_region['amount']:,.0f} processed")
+    b.info(f"**Most active category:** {top_category['category']} — {int(top_category['size']):,} transactions")
+    c.info(f"**Simulated fraud alerts:** {fraud_count:,} transactions labelled fraudulent")
+    report = (
+        "PAYLENS — EXECUTIVE SUMMARY (SYNTHETIC DATA)\\n"
+        f"Transactions: {len(filtered):,}\\n"
+        f"Transaction value: INR {total_value:,.2f}\\n"
+        f"Success rate: {success_rate:.2f}%\\n"
+        f"Simulated fraud rate: {fraud_rate:.2f}%\\n"
+        f"Top region by value: {top_region['region']}\\n"
+        f"Top category by volume: {top_category['category']}\\n"
+        "This report uses simulated transactions and is not a real-world fraud assessment.\\n"
+    )
+    st.download_button("📥 Export executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
 
 with tab_fraud:
     st.subheader("Fraud Intelligence")
@@ -311,7 +359,13 @@ with tab_customers:
     st.dataframe(customer_summary.sort_values("lifetime_value", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
 
 with tab_explorer:
-    st.subheader("Transaction Data Explorer")
+    st.subheader("🔎 Transaction Data Explorer")
+    search_id = st.text_input("Find a transaction by ID", placeholder="e.g. 1042")
+    if search_id.strip():
+        if search_id.strip().isdigit():
+            filtered = filtered.loc[filtered["transaction_id"] == int(search_id.strip())].copy()
+        else:
+            st.warning("Enter a numeric transaction ID.")
     st.write(f"Showing {min(500, len(filtered)):,} of {len(filtered):,} filtered transactions.")
     st.dataframe(filtered.head(500), use_container_width=True, hide_index=True)
     csv = filtered.to_csv(index=False).encode("utf-8")
