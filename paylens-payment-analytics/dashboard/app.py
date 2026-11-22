@@ -4,6 +4,7 @@ import runpy
 
 import numpy as np
 import pandas as pd
+import shap
 import plotly.express as px
 import streamlit as st
 from sklearn.ensemble import RandomForestClassifier
@@ -365,12 +366,41 @@ def train_fraud_model(data: pd.DataFrame):
         .sort_values("importance", ascending=False)
         .head(12)
     )
-    return scored, metrics, importance
+    return scored, metrics, importance, model, features.columns.tolist()
 
 
 file_modified = DATA_FILE.stat().st_mtime
 df = load_data(str(DATA_FILE), file_modified)
-scored_df, model_metrics, feature_importance = train_fraud_model(df)
+scored_df, model_metrics, feature_importance, fraud_model, model_feature_columns = train_fraud_model(df)
+
+@st.cache_resource(show_spinner=False)
+def fraud_shap_explainer(model):
+    """Explain raw model class outputs; no live data leaves the app."""
+    return shap.TreeExplainer(model)
+
+
+def explain_transaction(row: pd.Series, model, model_columns: list[str]):
+    """Return base prediction and class-1 SHAP contributions for one transaction."""
+    numeric = ["amount", "transaction_hour", "is_weekend", "merchant_risk_score"]
+    categorical = ["category", "region", "payment_method", "device_type"]
+    one = pd.DataFrame([row[numeric + categorical].to_dict()])
+    encoded = pd.get_dummies(one, columns=categorical, dtype=int)
+    encoded = encoded.reindex(columns=model_columns, fill_value=0)
+    explainer = fraud_shap_explainer(model)
+    shap_result = explainer.shap_values(encoded)
+    if isinstance(shap_result, list):
+        contributions = np.asarray(shap_result[1])[0]
+    else:
+        array = np.asarray(shap_result)
+        contributions = array[0, :, 1] if array.ndim == 3 else array[0]
+    base_array = np.asarray(explainer.expected_value)
+    base = float(base_array[1] if base_array.ndim else base_array)
+    predicted = float(model.predict_proba(encoded)[0, 1])
+    return base, predicted, pd.DataFrame({
+        "feature": model_columns,
+        "contribution": contributions.astype(float),
+    })
+
 
 def navigate_to(destination: str) -> None:
     """Switch workspace from a button callback before Streamlit redraws widgets."""
@@ -696,8 +726,55 @@ if page == "Investigations":
             else:
                 st.caption("No predefined synthetic risk indicators stand out for this transaction.")
             st.caption(
-                "Transparent, rule-based investigation cues, not SHAP explanations or causal explanations of the model prediction."
+                "The cues above are simple rules, not explanations of the trained model."
             )
+            with st.expander("Explain this model prediction · SHAP", expanded=False):
+                st.caption(
+                    "SHAP values attribute how each encoded feature shifts this Random Forest's "
+                    "class-1 score relative to its baseline. They do not prove causality or "
+                    "establish real-world fraud probability."
+                )
+                if st.button("Calculate SHAP explanation", key=f"shap_tx_{int(selected_id)}"):
+                    with st.spinner("Calculating feature contributions..."):
+                        base, predicted, contributions = explain_transaction(
+                            selected, fraud_model, model_feature_columns
+                        )
+                    contribution_sum = base + contributions["contribution"].sum()
+                    st.caption(
+                        f"Baseline model score: {base:.1%} · "
+                        f"Feature contributions: {contributions['contribution'].sum():+.1%} · "
+                        f"Prediction: {predicted:.1%}"
+                    )
+                    if not np.isclose(contribution_sum, predicted, atol=1e-4):
+                        st.warning("SHAP contributions did not fully reconstruct the prediction.")
+                    top_effects = contributions.assign(
+                        magnitude=lambda frame: frame["contribution"].abs(),
+                        direction=lambda frame: np.where(
+                            frame["contribution"] >= 0, "Raises score", "Lowers score"
+                        ),
+                    ).nlargest(10, "magnitude").sort_values("contribution")
+                    effect_chart = px.bar(
+                        top_effects, x="contribution", y="feature", orientation="h",
+                        color="direction",
+                        color_discrete_map={
+                            "Raises score": PINK, "Lowers score": "#7db4eb"
+                        },
+                        labels={
+                            "contribution": "Contribution to model score",
+                            "feature": "Input feature",
+                        },
+                    )
+                    effect_chart.update_traces(
+                        hovertemplate="%{y}<br>Effect: %{x:+.4f}<extra></extra>"
+                    )
+                    style_fig(effect_chart, height=340, legend=True)
+                    effect_chart.update_xaxes(tickformat="+.1%")
+                    st.plotly_chart(effect_chart, use_container_width=True, config=PLOT_CONFIG)
+                    st.caption(
+                        "Positive bars raise the simulated model's risk score; "
+                        "negative bars lower it. Feature contributions reflect "
+                        "encoded columns and can be correlated."
+                    )
 
     with st.container(border=True):
         panel_header("Connected activity", "Other payments linked to this merchant or customer", "◎")
