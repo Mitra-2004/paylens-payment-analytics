@@ -191,6 +191,7 @@ if str(PROJECT_ROOT) not in sys.path:
 from src.network_analytics import (
     merchant_connections, network_summary, merchant_customer_overlap,
 )
+from src.data_quality import validate_transactions
 
 DATA_FILE = PROJECT_ROOT / "data" / "payments.csv"
 GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
@@ -381,7 +382,26 @@ def train_fraud_model(data: pd.DataFrame):
 
 
 file_modified = DATA_FILE.stat().st_mtime
-df = load_data(str(DATA_FILE), file_modified)
+try:
+    df = load_data(str(DATA_FILE), file_modified)
+    quality_issues = validate_transactions(df)
+except (OSError, ValueError, pd.errors.ParserError) as error:
+    quality_issues = [f"Dataset could not be read: {type(error).__name__}"]
+
+if quality_issues:
+    st.warning("Demo dataset failed quality checks; regenerating the reproducible sample.")
+    runpy.run_path(str(GENERATOR_FILE))
+    file_modified = DATA_FILE.stat().st_mtime
+    df = load_data(str(DATA_FILE), file_modified)
+    quality_issues = validate_transactions(df)
+
+if quality_issues:
+    st.error("Dataset validation failed. Check the generator or logs before continuing.")
+    with st.expander("Data-quality details"):
+        for issue in quality_issues:
+            st.write(f"- {issue}")
+    st.stop()
+
 scored_df, model_metrics, feature_importance, fraud_model, model_feature_columns = train_fraud_model(df)
 
 @st.cache_resource(show_spinner=False)
