@@ -15,8 +15,13 @@ devices = np.array(["Android", "iOS", "Windows", "Mac", "Unknown"])
 customer_ids = rng.integers(1, 5001, n)
 merchant_ids = rng.integers(1, 1001, n)
 amounts = np.round(rng.lognormal(mean=6.2, sigma=0.95, size=n), 2)
-hours = rng.integers(0, 24, n)
-weekends = rng.choice([0, 1], n, p=[5 / 7, 2 / 7])
+# Hours and weekends must correspond to each transaction timestamp.
+start = np.datetime64("2026-08-01T00:00:00")
+end = np.datetime64("2026-11-22T23:59:59")
+seconds = int((end - start) / np.timedelta64(1, "s"))
+timestamps = pd.to_datetime(start + rng.integers(0, seconds, n).astype("timedelta64[s]"))
+hours = timestamps.hour.to_numpy()
+weekends = (timestamps.dayofweek >= 5).astype(int)
 merchant_risk_map = rng.beta(2.0, 5.0, 1000)
 merchant_risk = merchant_risk_map[merchant_ids - 1]
 payment_method = rng.choice(payment_methods, n, p=[0.48, 0.20, 0.16, 0.10, 0.06])
@@ -43,14 +48,9 @@ is_fraud = rng.binomial(1, fraud_probability)
 success_probability = np.clip(0.95 - 0.34 * is_fraud - 0.10 * merchant_risk, 0.45, 0.99)
 success = rng.binomial(1, success_probability)
 
-start = np.datetime64("2026-08-01T00:00:00")
-end = np.datetime64("2026-11-22T23:59:59")
-seconds = int((end - start) / np.timedelta64(1, "s"))
-timestamps = start + rng.integers(0, seconds, n).astype("timedelta64[s]")
-
 df = pd.DataFrame({
     "transaction_id": np.arange(1, n + 1),
-    "timestamp": pd.to_datetime(timestamps),
+    "timestamp": timestamps,
     "customer_id": customer_ids,
     "merchant_id": merchant_ids,
     "category": rng.choice(categories, n),
