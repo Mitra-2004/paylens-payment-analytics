@@ -1,3 +1,4 @@
+from html import escape
 from pathlib import Path
 import runpy
 
@@ -20,53 +21,206 @@ from sklearn.model_selection import train_test_split
 
 st.set_page_config(page_title="PayLens | Payment Intelligence", page_icon="💳", layout="wide", initial_sidebar_state="expanded")
 px.defaults.template = "plotly_dark"
-px.defaults.color_discrete_sequence = ["#FF813F", "#F17C9B", "#E6B05D", "#A38BDB", "#68B6A3", "#8D96A5"]
+px.defaults.color_discrete_sequence = ["#FF7A3D", "#F0508A", "#E6B05D", "#A38BDB", "#68B6A3", "#8D96A5"]
 
-st.markdown("""
-<style>
-:root{--orange:#ff762f;--pink:#f26489;--panel:#202023;--line:#39383b}
-.stApp{background:radial-gradient(ellipse 55% 28% at 80% -4%,rgba(255,110,40,.16),transparent 80%),radial-gradient(ellipse 35% 25% at 14% 98%,rgba(221,72,37,.075),transparent 80%),#111113;color:#f4f3f3}
-.block-container{max-width:1580px;padding:1.25rem 2rem 3rem}
-[data-testid="stSidebar"]{background:linear-gradient(160deg,#1b1b1e,#111113 82%);border-right:1px solid #363538}
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.65rem}
-[data-testid="stMetric"]{background:radial-gradient(ellipse at 15% 0%,#343032 0%,transparent 70%),linear-gradient(145deg,#262629,#1b1b1e);border:1px solid #414044;border-radius:17px;padding:20px;min-height:116px;box-shadow:inset 0 1px 0 #ffffff13,0 10px 28px #0005;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
-[data-testid="stMetric"]:hover{transform:translateY(-3px);border-color:#9d5537;box-shadow:0 12px 30px #0007,0 0 22px #ff762f14}
-[data-testid="stMetricLabel"]{color:#bdbcc0;font-size:.85rem}
-[data-testid="stMetricValue"]{color:#faf9f8;letter-spacing:-.04em;font-weight:680}
-.stTabs [data-baseweb="tab-list"]{gap:5px;flex-wrap:wrap;border-bottom:1px solid #343438;padding-bottom:10px}
-.stTabs [data-baseweb="tab"]{background:#242326;border:1px solid #3b393c;border-radius:10px;padding:10px 15px;color:#c6c2c3;transition:all .17s ease}
-.stTabs [data-baseweb="tab"]:hover{background:#342a29;color:white}
-.stTabs [aria-selected="true"]{background:linear-gradient(90deg,#523128,#332526);color:#ffad79;border-color:#94553a}
-h1,h2,h3{letter-spacing:-.04em}h1{font-weight:740}
-[data-testid="stPlotlyChart"]{background:linear-gradient(140deg,#27272a,#1c1c1f);border:1px solid #3c3b3f;border-radius:17px;overflow:hidden;box-shadow:inset 0 1px 0 #ffffff0d,0 10px 25px #0003}
-[data-testid="stDataFrame"]{border:1px solid #373639;border-radius:12px;overflow:hidden}
-[data-testid="stVerticalBlockBorderWrapper"]{background:linear-gradient(145deg,#28282b,#1c1c1f);border:1px solid #424044!important;border-radius:17px!important;box-shadow:inset 0 1px 0 #ffffff0b,0 12px 32px #0004}
-[data-testid="stAlert"]{border-radius:12px}
-div.stButton button,div.stDownloadButton button{border-radius:10px;transition:transform .18s ease,border-color .18s ease}
-div.stButton button:hover,div.stDownloadButton button:hover{transform:translateY(-1px);border-color:#ff762f}
-div[data-baseweb="select"]>div{border-radius:10px}
-@media(max-width:850px){.block-container{padding:1rem .75rem 2rem}[data-testid="stMetric"]{padding:12px;min-height:95px}.stTabs [data-baseweb="tab"]{padding:8px 10px}}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+ACCENT = "#FF7A3D"
+PINK = "#F0508A"
+PLOT_CONFIG = {"displayModeBar": False}
 
-/* Sidebar navigation: compact, modern selectable rows */
-[data-testid="stSidebar"] [role="radiogroup"]{gap:6px}
-[data-testid="stSidebar"] [role="radiogroup"] label{border:1px solid transparent;padding:10px 11px;border-radius:11px;transition:background .2s ease,border-color .2s ease;cursor:pointer}
-[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#2a2525;border-color:#3e3330}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:linear-gradient(90deg,#553226,#292224);border-color:#754634;box-shadow:inset 3px 0 #ff762f,0 0 16px #ff762f0b}
-[data-testid="stSidebar"] [role="radiogroup"] label [data-testid="stMarkdownContainer"] p{font-size:.92rem}
-[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:#ffbe94;font-weight:650}
+APP_CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;650;700&display=swap');
+:root{--bg:#0b0b0d;--surface:#17171b;--line:#2a2a31;--line-2:#383840;--text:#f5f4f4;--muted:#8e8b91;--orange:#ff7a3d;--orange-soft:#ffb38a;--pink:#f0508a;--radius:18px}
+html,body,.stApp{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.stApp{background:radial-gradient(ellipse 60% 30% at 85% -6%,rgba(255,122,61,.13),transparent 75%),radial-gradient(ellipse 40% 26% at 6% 100%,rgba(240,80,138,.06),transparent 80%),var(--bg);color:var(--text)}
+[data-testid="stHeader"]{background:transparent}
+[data-testid="stDecoration"]{display:none}
+.block-container{max-width:1520px;padding:1.6rem 2.2rem 3rem}
+h1,h2,h3,h4{letter-spacing:-.03em;color:var(--text)}
+
+/* Sidebar */
+[data-testid="stSidebar"]{background:linear-gradient(180deg,#131316,#0d0d10);border-right:1px solid #222228}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"]{gap:.6rem}
+.pl-brand{display:flex;align-items:center;gap:12px;padding:6px 4px 14px}
+.pl-logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(140deg,#ffa066,#ff5a2e 60%,#e0356b);display:grid;place-items:center;color:#fff;font-weight:800;font-size:1.1rem;box-shadow:0 10px 22px #ff5a2e40}
+.pl-brand-name{font-weight:700;font-size:1.05rem;color:var(--text);letter-spacing:-.02em}
+.pl-brand-sub{font-size:.72rem;color:var(--muted)}
+.pl-nav-label{color:#6f6c72;font-size:.68rem;font-weight:600;letter-spacing:.12em;text-transform:uppercase;margin:10px 6px 6px}
+[data-testid="stSidebar"] [role="radiogroup"]{gap:4px}
+[data-testid="stSidebar"] [role="radiogroup"] label{border:1px solid transparent;padding:9px 12px;border-radius:12px;transition:background .2s ease,border-color .2s ease;cursor:pointer}
+[data-testid="stSidebar"] [role="radiogroup"] label:hover{background:#1c1c21}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked){background:linear-gradient(90deg,rgba(255,122,61,.18),rgba(240,80,138,.06));border-color:#5a3423;box-shadow:inset 3px 0 var(--orange)}
+[data-testid="stSidebar"] [role="radiogroup"] label p{font-size:.92rem;color:#c9c6cb}
+[data-testid="stSidebar"] [role="radiogroup"] label:has(input:checked) p{color:#ffc5a4;font-weight:600}
 [data-testid="stSidebar"] [role="radiogroup"] [data-baseweb="radio"]>div:first-child{display:none}
-</style>
-""", unsafe_allow_html=True)
+
+/* Top bar */
+.pl-topbar{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;margin:0 0 20px;padding-bottom:16px;border-bottom:1px solid #222228}
+.pl-page-title{font-size:1.65rem;font-weight:700;letter-spacing:-.035em;color:var(--text)}
+.pl-page-sub{color:var(--muted);font-size:.9rem;margin-top:4px;max-width:760px;line-height:1.5}
+.pl-status{white-space:nowrap;font-size:.78rem;color:var(--orange-soft);background:#2a1b14;border:1px solid #4a2c1d;border-radius:999px;padding:6px 12px;font-weight:600}
+
+/* KPI cards */
+.pl-kpi-grid{display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:14px;margin:4px 0 16px}
+.pl-kpi{position:relative;overflow:hidden;background:linear-gradient(150deg,#1f1f25,#15151a);border:1px solid var(--line-2);border-radius:var(--radius);padding:18px 20px;transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .25s ease,box-shadow .25s ease;box-shadow:inset 0 1px 0 #ffffff0d,0 8px 24px #0004}
+.pl-kpi:hover{transform:translateY(-2px);border-color:#5a3a2c;box-shadow:inset 0 1px 0 #ffffff0d,0 14px 30px #0006,0 0 24px #ff7a3d12}
+.pl-kpi-label{color:var(--muted);font-size:.8rem;font-weight:500}
+.pl-kpi-value{color:var(--text);font-size:1.75rem;font-weight:700;letter-spacing:-.03em;margin-top:6px;font-variant-numeric:tabular-nums}
+.pl-kpi-note{color:var(--muted);font-size:.78rem;margin-top:6px}
+.pl-kpi-compact{padding:14px 16px;border-radius:14px}
+.pl-kpi-compact .pl-kpi-value{font-size:1.4rem}
+
+/* Panels */
+.pl-panel-head{display:flex;gap:12px;align-items:center;margin:2px 0 14px}
+.pl-chip{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,#3a2419,#231a17);border:1px solid #5a3626;color:var(--orange-soft);font-size:1.05rem;flex:none}
+.pl-panel-title{color:var(--text);font-weight:650;font-size:1rem;letter-spacing:-.01em}
+.pl-panel-sub{color:var(--muted);font-size:.82rem;margin-top:2px}
+[data-testid="stVerticalBlockBorderWrapper"]{background:linear-gradient(160deg,#1a1a1f,#131316)!important;border:1px solid var(--line)!important;border-radius:var(--radius)!important;box-shadow:inset 0 1px 0 #ffffff08,0 14px 34px #0005}
+[data-testid="stPlotlyChart"]{background:none;border:none;box-shadow:none;padding:0}
+[data-testid="stDataFrame"]{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+[data-testid="stExpander"]{background:var(--surface);border:1px solid var(--line)!important;border-radius:16px!important;overflow:hidden}
+[data-testid="stExpander"] summary{padding:12px 16px;font-weight:600;color:#dcd9dc}
+
+/* Rows, insights, cues */
+.pl-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #26262c}
+.pl-row:last-child{border-bottom:none}
+.pl-row-k{color:var(--text);font-weight:600;font-size:.94rem}
+.pl-row-s{color:var(--muted);font-size:.82rem;margin-top:3px}
+.pl-row-v{color:var(--orange-soft);font-weight:700;font-size:1rem;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pl-insights{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.pl-insight{background:linear-gradient(150deg,#1f1f25,#15151a);border:1px solid var(--line-2);border-radius:16px;padding:16px 18px}
+.pl-insight-k{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;font-weight:600}
+.pl-insight-v{color:var(--text);font-weight:650;margin-top:8px;font-size:1rem}
+.pl-insight-s{color:var(--muted);font-size:.82rem;margin-top:4px;line-height:1.45}
+.pl-cue{display:flex;gap:10px;align-items:flex-start;background:#1d1a1c;border:1px solid #352a2c;border-radius:12px;padding:10px 12px;color:#e6e2e4;font-size:.9rem;margin:6px 0;line-height:1.45}
+.pl-cue::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--orange);margin-top:7px;flex:none}
+.pl-txn-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.pl-txn-id{font-size:1.4rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pl-meter{height:8px;border-radius:999px;background:#26262c;overflow:hidden;margin:8px 0 6px}
+.pl-meter-fill{height:100%;border-radius:999px;transition:width .4s ease}
+.pl-badge{display:inline-flex;align-items:center;padding:4px 11px;border-radius:999px;font-size:.76rem;font-weight:600;border:1px solid;white-space:nowrap}
+.pl-badge-high{color:#ff8fb1;background:#3a1622;border-color:#6b2a3f}
+.pl-badge-medium{color:#ffb38a;background:#33200f;border-color:#6a3d1d}
+.pl-badge-low{color:#b9b6bc;background:#202026;border-color:#3a3a42}
+
+/* Buttons and inputs */
+div.stButton button,div.stDownloadButton button,div.stFormSubmitButton button{border-radius:12px;border:1px solid #3a3a42;background:#1d1d23;color:#e9e6e8;font-weight:550;padding:.45rem 1rem;transition:transform .18s ease,border-color .18s ease,filter .18s ease}
+div.stButton button:hover,div.stDownloadButton button:hover{transform:translateY(-1px);border-color:var(--orange);color:#fff}
+div.stButton button[kind="primary"],div.stFormSubmitButton button[kind="primary"]{background:linear-gradient(95deg,#ff7a3d,#f0508a);border:0;color:#fff;box-shadow:0 10px 24px #ff5a2e33}
+div.stButton button[kind="primary"]:hover,div.stFormSubmitButton button[kind="primary"]:hover{filter:brightness(1.08);transform:translateY(-1px)}
+div[data-baseweb="select"]>div,div[data-baseweb="input"]>div,div[data-baseweb="textarea"]{border-radius:12px!important;background:#16161a!important;border-color:#33333b!important}
+[data-testid="stSlider"] [role="slider"]{background:var(--orange)!important}
+
+/* Segmented navigation (replaces in-page radio tabs) */
+[data-testid="stSegmentedControl"]{width:fit-content;margin:0 0 14px}
+[data-testid="stSegmentedControl"] button{background:#1b1b20;border:1px solid #33333b;border-radius:10px;color:#a9a6ac;font-weight:550;padding:6px 14px;transition:all .18s ease}
+[data-testid="stSegmentedControl"] button:hover{color:#fff;border-color:#4a3428}
+[data-testid="stSegmentedControl"] button[aria-checked="true"],[data-testid="stSegmentedControl"] button[aria-pressed="true"]{background:linear-gradient(90deg,#4a2c1f,#2c1f1f);color:#ffc7a8;border-color:#8a4c2f}
+
+@media(max-width:900px){.block-container{padding:1rem .8rem 2rem}.pl-kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.pl-insights{grid-template-columns:1fr}.pl-topbar{flex-direction:column;align-items:flex-start}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
+"""
+st.markdown(f"<style>{APP_CSS}</style>", unsafe_allow_html=True)
+
+PAGES = ["Overview", "Investigations", "Fraud Intelligence", "Merchant Risk", "Customer Insights", "Transactions"]
+PAGE_ICONS = {
+    "Overview": "▦",
+    "Investigations": "⌕",
+    "Fraud Intelligence": "⚑",
+    "Merchant Risk": "◫",
+    "Customer Insights": "◔",
+    "Transactions": "≡",
+}
+PAGE_META = {
+    "Overview": ("Overview", "Explore regional performance, payment trends and operational KPIs. All figures reflect your active filters."),
+    "Investigations": ("Investigations", "Review suspicious payments, trace related activity, and document decisions. Changes remain in this browser session."),
+    "Fraud Intelligence": ("Fraud Intelligence", "Random Forest on synthetic fraud labels. Test metrics use held-out transactions; transaction queue scores include in-sample predictions and are illustrative, not independently validated."),
+    "Merchant Risk": ("Merchant intelligence", "Identify concentrated exposure, compare merchant performance and investigate individual merchant profiles."),
+    "Customer Insights": ("Customer insights", "Understand where customer value concentrates and how often customers transact under your active filters."),
+    "Transactions": ("Transaction explorer", "Search, filter and export individual payment records."),
+}
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_FILE = PROJECT_ROOT / "data" / "payments.csv"
 GENERATOR_FILE = PROJECT_ROOT / "src" / "generate_data.py"
 
-st.title("PayLens")
-st.caption("Payment intelligence  /  Fraud analytics  /  Merchant performance")
+
+# ---------- Shared UI components ----------
+
+def kpi_row(items, compact=False):
+    """Render a row of KPI cards. items: list of (label, value, note)."""
+    card_class = "pl-kpi pl-kpi-compact" if compact else "pl-kpi"
+    cards = []
+    for label, value, note in items:
+        note_html = f'<div class="pl-kpi-note">{escape(note)}</div>' if note else ""
+        cards.append(
+            f'<div class="{card_class}"><div class="pl-kpi-label">{escape(label)}</div>'
+            f'<div class="pl-kpi-value">{escape(value)}</div>{note_html}</div>'
+        )
+    st.markdown(
+        f'<div class="pl-kpi-grid" style="--cols:{len(items)}">{"".join(cards)}</div>',
+        unsafe_allow_html=True,
+    )
 
 
+def panel_header(title, subtitle, icon):
+    st.markdown(
+        f'<div class="pl-panel-head"><div class="pl-chip">{escape(icon)}</div>'
+        f'<div><div class="pl-panel-title">{escape(title)}</div>'
+        f'<div class="pl-panel-sub">{escape(subtitle)}</div></div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def segmented(label, options, key):
+    """Pill-style segmented navigation used inside pages."""
+    if hasattr(st, "segmented_control"):
+        choice = st.segmented_control(
+            label, options, default=options[0], selection_mode="single",
+            key=key, label_visibility="collapsed",
+        )
+        return choice or options[0]
+    return st.radio(label, options, horizontal=True, key=key, label_visibility="collapsed")
+
+
+def style_fig(fig, height=300, legend=False, axes=True):
+    fig.update_layout(
+        height=height,
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"family": "Inter, sans-serif", "color": "#c9c6c8", "size": 12},
+        margin={"l": 8, "r": 10, "t": 10, "b": 8},
+        showlegend=legend,
+        hoverlabel={"bgcolor": "#1c1c21", "bordercolor": "#3a3a41",
+                    "font": {"color": "#f4f3f3", "family": "Inter, sans-serif"}},
+    )
+    if axes:
+        fig.update_xaxes(showgrid=False, zeroline=False, linecolor="#2c2c33", tickfont={"color": "#8d8a8f"})
+        fig.update_yaxes(gridcolor="#26262c", zeroline=False, linecolor="#2c2c33", tickfont={"color": "#8d8a8f"})
+    return fig
+
+
+def risk_meter(value):
+    pct = max(0.0, min(1.0, value)) * 100
+    color = PINK if value >= 0.60 else ("#ff8a3d" if value >= 0.30 else "#7b7880")
+    st.markdown(
+        f'<div class="pl-meter"><div class="pl-meter-fill" style="width:{pct:.1f}%;background:{color}"></div></div>',
+        unsafe_allow_html=True,
+    )
+
+
+def band_badge(band):
+    return f'<span class="pl-badge pl-badge-{escape(band.lower())}">{escape(band)} risk</span>'
+
+
+def insight_card(kicker, value, detail):
+    return (
+        f'<div class="pl-insight"><div class="pl-insight-k">{escape(kicker)}</div>'
+        f'<div class="pl-insight-v">{escape(value)}</div>'
+        f'<div class="pl-insight-s">{escape(detail)}</div></div>'
+    )
+
+
+# ---------- Data preparation ----------
 
 REQUIRED_COLUMNS = {
     "transaction_id", "timestamp", "customer_id", "merchant_id",
@@ -168,19 +322,24 @@ def navigate_to(destination: str) -> None:
     st.session_state["paylens_page"] = destination
 
 
+# ---------- Sidebar navigation and filters ----------
+
 with st.sidebar:
-    st.markdown('### <span style="color:#ff762f">◈</span> PayLens', unsafe_allow_html=True)
-    st.caption("INTELLIGENCE WORKSPACE")
-    st.divider()
-    st.markdown("##### WORKSPACE")
+    st.markdown(
+        '<div class="pl-brand"><div class="pl-logo">P</div>'
+        '<div><div class="pl-brand-name">PayLens</div>'
+        '<div class="pl-brand-sub">Payment intelligence</div></div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown('<div class="pl-nav-label">Workspace</div>', unsafe_allow_html=True)
     page = st.radio(
         "Workspace",
-        ["Overview", "Investigations", "Fraud Intelligence", "Merchant Risk", "Customer Insights", "Transactions"],
+        PAGES,
+        format_func=lambda name: f"{PAGE_ICONS[name]}   {name}",
         label_visibility="collapsed",
         key="paylens_page",
     )
-    st.divider()
-    st.markdown("##### FILTER TRANSACTIONS")
+    st.markdown('<div class="pl-nav-label">Filters</div>', unsafe_allow_html=True)
     with st.expander("Refine your view", expanded=False):
         selected_regions = st.multiselect("Region", sorted(df["region"].unique()), default=sorted(df["region"].unique()))
         selected_categories = st.multiselect("Category", sorted(df["category"].unique()), default=sorted(df["category"].unique()))
@@ -215,20 +374,30 @@ if filtered.empty:
     st.warning("No transactions match these filters. Adjust the filters in the sidebar.")
     st.stop()
 
-st.caption(f"WORKSPACE / {page.upper()}     ·     {len(filtered):,} MATCHING TRANSACTIONS")
+# ---------- Page header ----------
+
+page_title, page_subtitle = PAGE_META[page]
+subtitle_html = f'<div class="pl-page-sub">{escape(page_subtitle)}</div>' if page_subtitle else ""
+st.markdown(
+    f'<div class="pl-topbar"><div><div class="pl-page-title">{escape(page_title)}</div>{subtitle_html}</div>'
+    f'<div class="pl-status">{len(filtered):,} matching transactions</div></div>',
+    unsafe_allow_html=True,
+)
+
+
+# ---------- Overview ----------
 
 if page == "Overview":
-    st.subheader("Overview")
-    st.caption("Explore regional performance, payment trends and operational KPIs. All figures reflect your active filters.")
     total_value = filtered["amount"].sum()
     success_rate = filtered["success"].mean() * 100
     fraud_count = int(filtered["is_fraud"].sum())
     fraud_rate = filtered["is_fraud"].mean() * 100
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Transactions", f"{len(filtered):,}")
-    m2.metric("Transaction value", f"₹{total_value:,.0f}")
-    m3.metric("Payment success rate", f"{success_rate:.1f}%")
-    m4.metric("Simulated fraud rate", f"{fraud_rate:.2f}%")
+    kpi_row([
+        ("Transactions", f"{len(filtered):,}", "In selected period"),
+        ("Transaction value", f"₹{total_value:,.0f}", "Gross processed"),
+        ("Payment success rate", f"{success_rate:.1f}%", "Successful attempts"),
+        ("Simulated fraud rate", f"{fraud_rate:.2f}%", "Labelled fraudulent"),
+    ])
 
     daily = filtered.set_index("timestamp").resample("D").agg(
         transaction_count=("transaction_id", "count"),
@@ -237,72 +406,68 @@ if page == "Overview":
     ).reset_index()
     region_value = filtered.groupby("region", as_index=False)["amount"].sum().sort_values("amount", ascending=False)
     category_volume = filtered.groupby("category", as_index=False).size().sort_values("size", ascending=False)
+
     chart_left, chart_right = st.columns([1.55, 1], gap="medium")
     with chart_left:
         with st.container(border=True):
-            st.markdown("#### Transaction trend")
-            st.caption("Daily payment activity across your selected period")
-            trend_metric = st.radio(
-                "Metric", ["Transaction volume", "Transaction value"],
-                horizontal=True, key="overview_trend",
-            )
+            panel_header("Transaction trend", "Daily payment activity across your selected period", "↗")
+            trend_metric = segmented("Metric", ["Transaction volume", "Transaction value"], key="overview_trend")
             trend_column = "transaction_count" if trend_metric == "Transaction volume" else "transaction_value"
             trend_chart = px.area(daily, x="timestamp", y=trend_column)
             trend_chart.update_traces(
-                line={"width": 3, "color": "#ff762f"},
-                fillcolor="rgba(255,118,47,.18)",
+                line={"width": 2.5, "color": ACCENT},
+                fillcolor="rgba(255,122,61,.16)",
                 hovertemplate="%{x|%d %b %Y}<br>%{y:,.0f}<extra></extra>",
             )
-            trend_chart.update_layout(
-                height=310, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-                font={"color": "#d4d1d2"}, margin={"l": 5, "r": 8, "t": 10, "b": 4},
-                xaxis={"showgrid": False, "title": None},
-                yaxis={"gridcolor": "#383638", "title": None},
-                showlegend=False, hovermode="x unified",
-            )
-            st.plotly_chart(trend_chart, use_container_width=True)
+            style_fig(trend_chart, height=290)
+            trend_chart.update_layout(hovermode="x unified")
+            trend_chart.update_xaxes(title_text=None)
+            trend_chart.update_yaxes(title_text=None)
+            st.plotly_chart(trend_chart, use_container_width=True, config=PLOT_CONFIG)
     with chart_right:
         with st.container(border=True):
-            st.markdown("#### Intelligence brief")
-            st.caption("Observations generated from the filtered synthetic data")
+            panel_header("Intelligence brief", "Observations from the filtered synthetic data", "✦")
             high_risk_count = int((filtered["risk_band"] == "High").sum())
             largest_region = region_value.iloc[0]
             highest_category = category_volume.iloc[0]
-            st.markdown(f"**High-risk model flags** · {high_risk_count:,}")
-            st.caption("Transactions with model scores above 60%.")
-            st.divider()
-            st.markdown(f"**Largest market** · {largest_region['region']}")
-            st.caption(f"₹{largest_region['amount']:,.0f} in transaction value.")
-            st.divider()
-            st.markdown(f"**Most active category** · {highest_category['category']}")
-            st.caption(f"{int(highest_category['size']):,} payments in the selected period.")
-            st.divider()
-            st.caption("These are descriptive signals, not real-time alerts or AI-generated causal findings.")
+            st.markdown(
+                '<div class="pl-row"><div><div class="pl-row-k">High-risk model flags</div>'
+                '<div class="pl-row-s">Transactions with model scores above 60%</div></div>'
+                f'<div class="pl-row-v">{high_risk_count:,}</div></div>'
+                '<div class="pl-row"><div><div class="pl-row-k">Largest market</div>'
+                f'<div class="pl-row-s">₹{largest_region["amount"]:,.0f} in transaction value</div></div>'
+                f'<div class="pl-row-v">{escape(str(largest_region["region"]))}</div></div>'
+                '<div class="pl-row"><div><div class="pl-row-k">Most active category</div>'
+                f'<div class="pl-row-s">{int(highest_category["size"]):,} payments in the selected period</div></div>'
+                f'<div class="pl-row-v">{escape(str(highest_category["category"]))}</div></div>',
+                unsafe_allow_html=True,
+            )
+            st.caption("Descriptive signals, not real-time alerts or AI-generated causal findings.")
 
     bottom_left, bottom_right = st.columns([1, 1.55], gap="medium")
     with bottom_left:
         with st.container(border=True):
-            st.markdown("#### Risk distribution")
-            st.caption("Share of transactions by model risk band")
+            panel_header("Risk distribution", "Share of transactions by model risk band", "◔")
             risk_counts = filtered["risk_band"].value_counts().reindex(
                 ["Low", "Medium", "High"], fill_value=0
             )
             risk_pie = px.pie(
                 names=risk_counts.index, values=risk_counts.values, hole=.68,
                 color=risk_counts.index,
-                color_discrete_map={"Low": "#57565d", "Medium": "#ff852f", "High": "#f05a82"},
+                color_discrete_map={"Low": "#57565d", "Medium": "#ff852f", "High": PINK},
             )
-            risk_pie.update_traces(textinfo="percent", textposition="outside")
-            risk_pie.update_layout(
-                height=260, margin={"l": 5, "r": 5, "t": 0, "b": 0},
-                paper_bgcolor="rgba(0,0,0,0)", font={"color": "#f1eded"},
-                legend={"orientation": "h", "y": -.05},
+            risk_pie.update_traces(textinfo="none", sort=False)
+            style_fig(risk_pie, height=270, legend=True, axes=False)
+            risk_pie.update_layout(legend={"orientation": "h", "y": -0.05, "x": 0.5, "xanchor": "center"})
+            high_share = risk_counts.get("High", 0) / max(risk_counts.sum(), 1) * 100
+            risk_pie.add_annotation(
+                text=f"<b>{high_share:.1f}%</b><br><span style='font-size:11px;color:#8e8b91'>High risk</span>",
+                showarrow=False, font={"size": 20, "color": "#f5f4f4"},
             )
-            st.plotly_chart(risk_pie, use_container_width=True)
+            st.plotly_chart(risk_pie, use_container_width=True, config=PLOT_CONFIG)
     with bottom_right:
         with st.container(border=True):
-            st.markdown("#### Recent high-risk transactions")
-            st.caption("Investigate individual payments in the Investigations workspace")
+            panel_header("Recent high-risk transactions", "Investigate individual payments in the Investigations workspace", "⚑")
             recent_queue = filtered.sort_values(
                 ["predicted_fraud_risk", "timestamp"], ascending=False
             ).head(7)
@@ -318,30 +483,41 @@ if page == "Overview":
                     ),
                 },
             )
-            st.caption("Scores are illustrative; they include in-sample model predictions.")
-            st.button(
-                "Open investigations", type="primary",
-                on_click=navigate_to, args=("Investigations",),
-                use_container_width=True,
-            )
+            footer_left, footer_right = st.columns([2, 1])
+            with footer_left:
+                st.caption("Scores are illustrative and include in-sample model predictions.")
+            with footer_right:
+                st.button(
+                    "Open investigations", type="primary",
+                    on_click=navigate_to, args=("Investigations",),
+                    use_container_width=True,
+                )
 
     with st.expander("Explore regional and category performance"):
         breakdown_left, breakdown_right = st.columns(2)
         with breakdown_left:
-            region_chart = px.bar(region_value, x="region", y="amount", title="Value by region (₹)")
-            region_chart.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(region_chart, use_container_width=True)
+            st.markdown("**Value by region (₹)**")
+            region_chart = px.bar(region_value, x="region", y="amount")
+            region_chart.update_traces(marker_color=ACCENT)
+            style_fig(region_chart, height=300)
+            st.plotly_chart(region_chart, use_container_width=True, config=PLOT_CONFIG)
         with breakdown_right:
-            category_chart = px.bar(category_volume, x="category", y="size", title="Transactions by category")
-            category_chart.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-            st.plotly_chart(category_chart, use_container_width=True)
-    st.markdown("#### What stands out")
+            st.markdown("**Transactions by category**")
+            category_chart = px.bar(category_volume, x="category", y="size")
+            category_chart.update_traces(marker_color=PINK)
+            style_fig(category_chart, height=300)
+            st.plotly_chart(category_chart, use_container_width=True, config=PLOT_CONFIG)
+
     top_region = region_value.iloc[0]
     top_category = category_volume.iloc[0]
-    a, b, c = st.columns(3)
-    a.info(f"**Top region:** {top_region['region']} — ₹{top_region['amount']:,.0f} processed")
-    b.info(f"**Most active category:** {top_category['category']} — {int(top_category['size']):,} transactions")
-    c.info(f"**Simulated fraud alerts:** {fraud_count:,} transactions labelled fraudulent")
+    st.markdown(
+        '<div class="pl-insights">'
+        + insight_card("Top region", str(top_region["region"]), f"₹{top_region['amount']:,.0f} processed")
+        + insight_card("Most active category", str(top_category["category"]), f"{int(top_category['size']):,} transactions")
+        + insight_card("Simulated fraud alerts", f"{fraud_count:,}", "Transactions labelled fraudulent")
+        + "</div>",
+        unsafe_allow_html=True,
+    )
     report = (
         "PAYLENS — EXECUTIVE SUMMARY (SYNTHETIC DATA)\n"
         f"Transactions: {len(filtered):,}\n"
@@ -355,20 +531,15 @@ if page == "Overview":
     st.download_button("Download executive summary", report, file_name="paylens_executive_summary.txt", mime="text/plain")
 
 
+# ---------- Investigations ----------
+
 if page == "Investigations":
-    st.subheader("Investigations")
-    st.caption("CASE REVIEW  /  TRANSACTION DETAIL  /  CONNECTED ACTIVITY")
-    st.caption("Review suspicious payments, trace related activity, and document decisions. Changes remain in this browser session.")
     queue = filtered.sort_values("predicted_fraud_risk", ascending=False)
     left_queue, right_queue = st.columns([1, 1.65], gap="medium")
     with left_queue:
         with st.container(border=True):
-            st.markdown("#### Review queue")
-            st.caption("Sort, select and inspect a payment")
-            queue_mode = st.radio(
-                "Queue", ["Highest risk", "Largest amount", "Recent"],
-                horizontal=True, key="investigation_queue",
-            )
+            panel_header("Review queue", "Sort, select and inspect a payment", "⌕")
+            queue_mode = segmented("Queue", ["Highest risk", "Largest amount", "Recent"], key="investigation_queue")
             if queue_mode == "Largest amount":
                 queue = filtered.sort_values("amount", ascending=False)
             elif queue_mode == "Recent":
@@ -390,19 +561,31 @@ if page == "Investigations":
                 },
             )
             st.caption("Queue shows up to 150 candidate transactions under your current filters.")
+
     selected = filtered.loc[filtered["transaction_id"] == selected_id].iloc[0]
     merchant_history = scored_df.loc[scored_df["merchant_id"] == selected["merchant_id"]]
     customer_history = scored_df.loc[scored_df["customer_id"] == selected["customer_id"]]
+    risk_value = float(selected["predicted_fraud_risk"])
+    band = str(selected["risk_band"])
+
     with right_queue:
         with st.container(border=True):
-            st.markdown(f"### Transaction · TX-{int(selected_id):06d}")
-            st.caption(f"{selected['timestamp']:%d %b %Y · %H:%M}  ·  {selected['region']}  ·  {selected['category']}")
-            risk_value = float(selected["predicted_fraud_risk"])
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Transaction amount", f"₹{selected['amount']:,.2f}")
-            m2.metric("Model risk score", f"{risk_value:.1%}")
-            m3.metric("Risk band", str(selected["risk_band"]))
-            st.progress(risk_value, text="Illustrative model risk estimate")
+            st.markdown(
+                '<div class="pl-txn-head"><div>'
+                f'<div class="pl-txn-id">TX-{int(selected_id):06d}</div>'
+                f'<div class="pl-panel-sub">{selected["timestamp"]:%d %b %Y · %H:%M} · '
+                f'{escape(str(selected["region"]))} · {escape(str(selected["category"]))}</div>'
+                f'</div>{band_badge(band)}</div>',
+                unsafe_allow_html=True,
+            )
+            kpi_row([
+                ("Transaction amount", f"₹{selected['amount']:,.2f}", None),
+                ("Model risk score", f"{risk_value:.1%}", None),
+                ("Risk band", band, None),
+            ], compact=True)
+            st.caption("Illustrative model risk estimate")
+            risk_meter(risk_value)
+
             st.markdown("**Payment details**")
             detail = pd.DataFrame({
                 "Field": ["Merchant", "Customer", "Payment method", "Device", "Payment result", "Simulated fraud label"],
@@ -416,158 +599,172 @@ if page == "Investigations":
                 ],
             })
             st.dataframe(detail, hide_index=True, use_container_width=True)
+
             st.markdown("**What deserves a closer look?**")
             amount_cutoff = float(scored_df["amount"].quantile(0.94))
-            indicators = []
+            cues = []
             if selected["amount"] > amount_cutoff:
-                indicators.append("This amount is above the 94th percentile of the synthetic dataset.")
+                cues.append("This amount is above the 94th percentile of the synthetic dataset.")
             if int(selected["transaction_hour"]) <= 4 or int(selected["transaction_hour"]) >= 23:
-                indicators.append("The recorded transaction hour is in the late-night window.")
+                cues.append("The recorded transaction hour is in the late-night window.")
             if selected["device_type"] == "Unknown":
-                indicators.append("The device type is unknown.")
+                cues.append("The device type is unknown.")
             if float(selected["merchant_risk_score"]) > 0.5:
-                indicators.append("The merchant has an elevated simulated risk attribute.")
+                cues.append("The merchant has an elevated simulated risk attribute.")
             if selected["payment_method"] in ["Credit Card", "Debit Card"]:
-                indicators.append("Card payment is one of the signals used in the synthetic label-generation process.")
-            if indicators:
-                for indicator in indicators:
-                    st.markdown(f"- {indicator}")
+                cues.append("Card payment is one of the signals used in the synthetic label-generation process.")
+            if cues:
+                st.markdown("".join(f'<div class="pl-cue">{escape(cue)}</div>' for cue in cues), unsafe_allow_html=True)
             else:
-                st.write("No predefined synthetic risk indicators stand out for this transaction.")
+                st.caption("No predefined synthetic risk indicators stand out for this transaction.")
             st.caption(
-                "These are transparent, rule-based investigation cues—not SHAP explanations or causal explanations of this model prediction."
+                "Transparent, rule-based investigation cues, not SHAP explanations or causal explanations of the model prediction."
             )
-    st.divider()
-    st.markdown("#### Connected activity")
-    h1, h2, h3 = st.columns(3)
-    h1.metric("Merchant transactions", f"{len(merchant_history):,}")
-    h2.metric("Merchant average model risk", f"{merchant_history['predicted_fraud_risk'].mean():.1%}")
-    h3.metric("Customer transactions", f"{len(customer_history):,}")
-    history_view = st.radio(
-        "Related activity", ["Merchant", "Customer"], horizontal=True, key="investigation_history"
-    )
-    related = merchant_history if history_view == "Merchant" else customer_history
-    related = related.sort_values("timestamp", ascending=False)
-    st.dataframe(
-        related[["transaction_id", "timestamp", "amount", "region", "payment_method", "predicted_fraud_risk"]].head(30),
-        hide_index=True, use_container_width=True,
-    )
-    st.markdown("#### Analyst decision")
-    if "case_records" not in st.session_state:
-        st.session_state["case_records"] = {}
-    previous = st.session_state["case_records"].get(int(selected_id), {})
-    with st.form(f"case_form_{int(selected_id)}"):
-        decision_options = ["Unreviewed", "Monitor", "Escalate for review", "No action"]
-        previous_status = previous.get("status", "Unreviewed")
-        status = st.selectbox("Decision", decision_options, index=decision_options.index(previous_status))
-        notes = st.text_area("Investigation notes", value=previous.get("notes", ""), max_chars=1000,
-                             placeholder="Document the signals reviewed and why this decision was made.")
-        save = st.form_submit_button("Save case note", type="primary")
-    if save:
-        st.session_state["case_records"][int(selected_id)] = {"status": status, "notes": notes}
-        st.success("Case note saved for this session.")
-    if st.session_state["case_records"]:
-        records = pd.DataFrame([
-            {"transaction_id": tx, **entry}
-            for tx, entry in st.session_state["case_records"].items()
-        ])
-        st.download_button(
-            "Export session case notes", records.to_csv(index=False).encode("utf-8"),
-            file_name="paylens_investigation_notes.csv", mime="text/csv",
+
+    with st.container(border=True):
+        panel_header("Connected activity", "Other payments linked to this merchant or customer", "◎")
+        kpi_row([
+            ("Merchant transactions", f"{len(merchant_history):,}", None),
+            ("Merchant average model risk", f"{merchant_history['predicted_fraud_risk'].mean():.1%}", None),
+            ("Customer transactions", f"{len(customer_history):,}", None),
+        ], compact=True)
+        history_view = segmented("Related activity", ["Merchant", "Customer"], key="investigation_history")
+        related = merchant_history if history_view == "Merchant" else customer_history
+        related = related.sort_values("timestamp", ascending=False)
+        st.dataframe(
+            related[["transaction_id", "timestamp", "amount", "region", "payment_method", "predicted_fraud_risk"]].head(30),
+            hide_index=True, use_container_width=True,
         )
-    st.caption("Session-only notes are not shared or persisted. This is a demonstration workflow, not a production case-management system.")
+
+    with st.container(border=True):
+        panel_header("Analyst decision", "Record a decision and notes for this transaction", "✎")
+        if "case_records" not in st.session_state:
+            st.session_state["case_records"] = {}
+        previous = st.session_state["case_records"].get(int(selected_id), {})
+        with st.form(f"case_form_{int(selected_id)}"):
+            decision_options = ["Unreviewed", "Monitor", "Escalate for review", "No action"]
+            previous_status = previous.get("status", "Unreviewed")
+            status = st.selectbox("Decision", decision_options, index=decision_options.index(previous_status))
+            notes = st.text_area("Investigation notes", value=previous.get("notes", ""), max_chars=1000,
+                                 placeholder="Document the signals reviewed and why this decision was made.")
+            save = st.form_submit_button("Save case note", type="primary")
+        if save:
+            st.session_state["case_records"][int(selected_id)] = {"status": status, "notes": notes}
+            st.success("Case note saved for this session.")
+        if st.session_state["case_records"]:
+            records = pd.DataFrame([
+                {"transaction_id": tx, **entry}
+                for tx, entry in st.session_state["case_records"].items()
+            ])
+            st.download_button(
+                "Export session case notes", records.to_csv(index=False).encode("utf-8"),
+                file_name="paylens_investigation_notes.csv", mime="text/csv",
+            )
+        st.caption("Session-only notes are not shared or persisted. This is a demonstration workflow, not a production case-management system.")
+
+
+# ---------- Fraud Intelligence ----------
 
 if page == "Fraud Intelligence":
-    st.subheader("Fraud Intelligence")
-    st.caption("Random Forest on synthetic fraud labels. Test metrics use held-out transactions; transaction queue scores include in-sample predictions and are illustrative, not independently validated.")
-    f1, f2, f3, f4, f5 = st.columns(5)
-    f1.metric("Accuracy", f"{model_metrics['accuracy'] * 100:.1f}%")
-    f2.metric("Precision", f"{model_metrics['precision'] * 100:.1f}%")
-    f3.metric("Recall", f"{model_metrics['recall'] * 100:.1f}%")
-    f4.metric("F1 score", f"{model_metrics['f1']:.3f}")
-    f5.metric("ROC-AUC", f"{model_metrics['roc_auc']:.3f}")
+    kpi_row([
+        ("Accuracy", f"{model_metrics['accuracy'] * 100:.1f}%", "Held-out test set"),
+        ("Precision", f"{model_metrics['precision'] * 100:.1f}%", "Held-out test set"),
+        ("Recall", f"{model_metrics['recall'] * 100:.1f}%", "Held-out test set"),
+        ("F1 score", f"{model_metrics['f1']:.3f}", "Held-out test set"),
+        ("ROC-AUC", f"{model_metrics['roc_auc']:.3f}", "Held-out test set"),
+    ])
 
-    st.markdown("**Classification threshold analysis (held-out test set)**")
-    threshold = st.slider("Fraud alert threshold", min_value=0.05, max_value=0.95, value=0.50, step=0.05)
-    test_labels = model_metrics["test_labels"]
-    test_probabilities = model_metrics["test_probabilities"]
-    threshold_predictions = (test_probabilities >= threshold).astype(int)
-    cm = confusion_matrix(test_labels, threshold_predictions, labels=[0, 1])
-    tp = int(cm[1, 1])
-    fp = int(cm[0, 1])
-    fn = int(cm[1, 0])
-    tn = int(cm[0, 0])
-    p1, p2, p3, p4 = st.columns(4)
-    p1.metric("Test precision", f"{precision_score(test_labels, threshold_predictions, zero_division=0):.1%}")
-    p2.metric("Test recall", f"{recall_score(test_labels, threshold_predictions, zero_division=0):.1%}")
-    p3.metric("False positives", f"{fp:,}")
-    p4.metric("Missed fraud cases", f"{fn:,}")
-    st.caption(f"Held-out test set: {len(test_labels):,} transactions; {tp:,} true positives and {tn:,} true negatives. Average precision (PR-AUC summary): {model_metrics['average_precision']:.3f}.")
-    cm_frame = pd.DataFrame(
-        cm,
-        index=["Actual legitimate", "Actual fraud"],
-        columns=["Predicted legitimate", "Predicted fraud"],
-    )
-    left_eval, right_eval = st.columns(2)
-    with left_eval:
-        st.markdown("**Confusion matrix**")
-        st.dataframe(cm_frame, use_container_width=True)
-    with right_eval:
-        st.markdown("**Precision–recall curve (held-out test set)**")
-        pr_precision, pr_recall, _ = precision_recall_curve(test_labels, test_probabilities)
-        pr_frame = pd.DataFrame({"Recall": pr_recall, "Precision": pr_precision})
+    with st.container(border=True):
+        panel_header("Threshold analysis", "Classification threshold on the held-out test set", "⚑")
+        threshold = st.slider("Fraud alert threshold", min_value=0.05, max_value=0.95, value=0.50, step=0.05)
+        test_labels = model_metrics["test_labels"]
+        test_probabilities = model_metrics["test_probabilities"]
+        threshold_predictions = (test_probabilities >= threshold).astype(int)
+        cm = confusion_matrix(test_labels, threshold_predictions, labels=[0, 1])
+        tp = int(cm[1, 1])
+        fp = int(cm[0, 1])
+        fn = int(cm[1, 0])
+        tn = int(cm[0, 0])
         selected_precision = precision_score(test_labels, threshold_predictions, zero_division=0)
         selected_recall = recall_score(test_labels, threshold_predictions, zero_division=0)
-        pr_chart = px.line(
-            pr_frame,
-            x="Recall",
-            y="Precision",
-            title="Precision–recall curve and selected threshold",
-            labels={"Recall": "Recall", "Precision": "Precision"},
-        )
-        pr_chart.add_scatter(
-            x=[selected_recall],
-            y=[selected_precision],
-            mode="markers+text",
-            marker={"size": 14, "color": "#ef4444", "symbol": "circle"},
-            text=[f"Threshold {threshold:.2f}"],
-            textposition="top center",
-            name="Selected threshold",
-            hovertemplate=(
-                f"Threshold: {threshold:.2f}<br>"
-                f"Precision: {selected_precision:.3f}<br>"
-                f"Recall: {selected_recall:.3f}<extra></extra>"
-            ),
-        )
-        pr_chart.update_layout(xaxis_range=[0, 1.02], yaxis_range=[0, 1.05])
-        st.plotly_chart(pr_chart, use_container_width=True)
+        kpi_row([
+            ("Test precision", f"{selected_precision:.1%}", None),
+            ("Test recall", f"{selected_recall:.1%}", None),
+            ("False positives", f"{fp:,}", None),
+            ("Missed fraud cases", f"{fn:,}", None),
+        ], compact=True)
         st.caption(
-            f"Selected threshold {threshold:.2f}: "
-            f"precision {selected_precision:.1%}, recall {selected_recall:.1%}. "
+            f"Held-out test set: {len(test_labels):,} transactions; {tp:,} true positives and {tn:,} true negatives. "
+            f"Average precision (PR-AUC summary): {model_metrics['average_precision']:.3f}."
+        )
+        cm_frame = pd.DataFrame(
+            cm,
+            index=["Actual legitimate", "Actual fraud"],
+            columns=["Predicted legitimate", "Predicted fraud"],
+        )
+        left_eval, right_eval = st.columns(2)
+        with left_eval:
+            st.markdown("**Confusion matrix**")
+            st.dataframe(cm_frame, use_container_width=True)
+        with right_eval:
+            st.markdown("**Precision–recall curve**")
+            pr_precision, pr_recall, _ = precision_recall_curve(test_labels, test_probabilities)
+            pr_frame = pd.DataFrame({"Recall": pr_recall, "Precision": pr_precision})
+            pr_chart = px.line(pr_frame, x="Recall", y="Precision")
+            pr_chart.update_traces(line={"color": ACCENT, "width": 2.5})
+            pr_chart.add_scatter(
+                x=[selected_recall],
+                y=[selected_precision],
+                mode="markers+text",
+                marker={"size": 14, "color": PINK, "symbol": "circle", "line": {"width": 2, "color": "#f5f4f4"}},
+                text=[f"Threshold {threshold:.2f}"],
+                textposition="top center",
+                name="Selected threshold",
+                hovertemplate=(
+                    f"Threshold: {threshold:.2f}<br>"
+                    f"Precision: {selected_precision:.3f}<br>"
+                    f"Recall: {selected_recall:.3f}<extra></extra>"
+                ),
+            )
+            style_fig(pr_chart, height=300)
+            pr_chart.update_layout(xaxis_range=[0, 1.02], yaxis_range=[0, 1.05])
+            st.plotly_chart(pr_chart, use_container_width=True, config=PLOT_CONFIG)
+        st.caption(
+            f"Selected threshold {threshold:.2f}: precision {selected_precision:.1%}, recall {selected_recall:.1%}. "
             "The full curve stays fixed because it represents all possible thresholds."
         )
 
     high_risk = filtered[filtered["risk_band"] == "High"].sort_values("predicted_fraud_risk", ascending=False)
-    left, right = st.columns(2)
+    left, right = st.columns(2, gap="medium")
     with left:
-        st.markdown("**Transactions by predicted risk band**")
-        risk_counts = filtered.groupby("risk_band", observed=False).size().reindex(["Low", "Medium", "High"], fill_value=0).rename("transactions").reset_index()
-        st.plotly_chart(px.bar(risk_counts, x="risk_band", y="transactions", color="risk_band", title="Model risk classification"), use_container_width=True)
+        with st.container(border=True):
+            panel_header("Transactions by risk band", "Model risk classification across the filtered set", "◔")
+            risk_counts = filtered.groupby("risk_band", observed=False).size().reindex(["Low", "Medium", "High"], fill_value=0).rename("transactions").reset_index()
+            band_chart = px.bar(risk_counts, x="risk_band", y="transactions", color="risk_band",
+                                color_discrete_map={"Low": "#57565d", "Medium": "#ff852f", "High": PINK})
+            style_fig(band_chart, height=280)
+            st.plotly_chart(band_chart, use_container_width=True, config=PLOT_CONFIG)
     with right:
-        st.markdown("**Most influential model features**")
-        st.plotly_chart(px.bar(feature_importance.sort_values("importance"), x="importance", y="feature", orientation="h", title="Random Forest feature importance"), use_container_width=True)
+        with st.container(border=True):
+            panel_header("Most influential features", "Random Forest feature importance", "◫")
+            importance_chart = px.bar(feature_importance.sort_values("importance"), x="importance", y="feature", orientation="h")
+            importance_chart.update_traces(marker_color=ACCENT)
+            style_fig(importance_chart, height=280)
+            st.plotly_chart(importance_chart, use_container_width=True, config=PLOT_CONFIG)
 
     with st.expander("How to interpret these results"):
         st.write("Lower thresholds catch more potentially fraudulent transactions but may create more false alarms. Higher thresholds reduce reviews but can miss fraud cases. Compare held-out test metrics before deciding.")
 
-    st.markdown("**High-risk transaction queue**")
-    display_cols = ["transaction_id", "timestamp", "customer_id", "merchant_id", "amount", "region", "category", "predicted_fraud_risk", "risk_band", "is_fraud"]
-    st.dataframe(high_risk[display_cols].head(100), use_container_width=True, hide_index=True)
-    st.caption("The is_fraud column is the synthetic ground-truth label included only to evaluate this demonstration dataset.")
+    with st.container(border=True):
+        panel_header("High-risk transaction queue", "Top transactions in the High risk band", "⚑")
+        display_cols = ["transaction_id", "timestamp", "customer_id", "merchant_id", "amount", "region", "category", "predicted_fraud_risk", "risk_band", "is_fraud"]
+        st.dataframe(high_risk[display_cols].head(100), use_container_width=True, hide_index=True)
+        st.caption("The is_fraud column is the synthetic ground-truth label included only to evaluate this demonstration dataset.")
+
+
+# ---------- Merchant Risk ----------
 
 if page == "Merchant Risk":
-    st.subheader("Merchant intelligence")
-    st.caption("Identify concentrated exposure, compare merchant performance and investigate individual merchant profiles.")
     merchant_summary = filtered.groupby("merchant_id").agg(
         transactions=("transaction_id", "count"),
         transaction_value=("amount", "sum"),
@@ -581,58 +778,54 @@ if page == "Merchant Risk":
     merchant_summary["observed_fraud_rate"] *= 100
     merchant_summary["predicted_risk"] *= 100
     merchant_summary["risk_tier"] = pd.cut(merchant_summary["predicted_risk"], [-0.01, 2, 5, 100], labels=["Low", "Medium", "High"])
-    st.markdown("#### Portfolio signals")
-    merchant_metrics = st.columns(4)
-    merchant_metrics[0].metric("Merchants in view", f"{len(merchant_summary):,}")
-    merchant_metrics[1].metric("Total processed", f"₹{merchant_summary['transaction_value'].sum():,.0f}")
-    merchant_metrics[2].metric("Average success rate", f"{filtered['success'].mean():.1%}")
-    merchant_metrics[3].metric("Portfolio model risk", f"{filtered['predicted_fraud_risk'].mean():.1%}")
-    chart_mode = st.radio(
-        "Compare merchants by", ["Model risk", "Transaction value", "Payment success"],
-        horizontal=True, key="merchant_chart_mode",
-    )
-    chart_columns = {
-        "Model risk": ("predicted_risk", "Average model risk (%)"),
-        "Transaction value": ("transaction_value", "Processed value (₹)"),
-        "Payment success": ("payment_success_rate", "Success rate (%)"),
-    }
-    chart_column, chart_label = chart_columns[chart_mode]
-    chart_top = merchant_summary.nlargest(12, chart_column).sort_values(chart_column)
+
+    kpi_row([
+        ("Merchants in view", f"{len(merchant_summary):,}", "Under active filters"),
+        ("Total processed", f"₹{merchant_summary['transaction_value'].sum():,.0f}", "Gross value"),
+        ("Average success rate", f"{filtered['success'].mean():.1%}", "Successful attempts"),
+        ("Portfolio model risk", f"{filtered['predicted_fraud_risk'].mean():.1%}", "Mean predicted score"),
+    ])
+
     with st.container(border=True):
-        st.markdown("#### Merchant comparison")
-        st.caption("Compare the top twelve merchants by the selected performance measure")
+        panel_header("Merchant comparison", "Top twelve merchants by the selected measure", "◫")
+        chart_mode = segmented("Compare merchants by", ["Model risk", "Transaction value", "Payment success"], key="merchant_chart_mode")
+        chart_columns = {
+            "Model risk": ("predicted_risk", "Average model risk (%)"),
+            "Transaction value": ("transaction_value", "Processed value (₹)"),
+            "Payment success": ("payment_success_rate", "Success rate (%)"),
+        }
+        chart_column, chart_label = chart_columns[chart_mode]
+        chart_top = merchant_summary.nlargest(12, chart_column).sort_values(chart_column)
         chart = px.bar(
             chart_top, x=chart_column, y="merchant_id", orientation="h",
             labels={chart_column: chart_label, "merchant_id": "Merchant"},
         )
-        chart.update_traces(marker_color="#ff762f")
-        chart.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            height=340, font={"color": "#e8e4e5"},
-            margin={"t": 10, "b": 20, "l": 10, "r": 10},
-            xaxis={"gridcolor": "#39373a"},
-            yaxis={"type": "category"},
-        )
-        st.plotly_chart(chart, use_container_width=True)
-    st.markdown("#### Merchant deep dive")
-    merchant_ids = merchant_summary.sort_values("predicted_risk", ascending=False)["merchant_id"].tolist()
-    selected_merchant = st.selectbox(
-        "Select merchant", merchant_ids,
-        format_func=lambda merchant: f"Merchant M-{int(merchant):04d}",
-        key="merchant_profile_id",
-    )
-    merchant_profile = merchant_summary.loc[
-        merchant_summary["merchant_id"] == selected_merchant
-    ].iloc[0]
-    profile_cols = st.columns(4)
-    profile_cols[0].metric("Transactions", f"{int(merchant_profile['transactions']):,}")
-    profile_cols[1].metric("Processed value", f"₹{merchant_profile['transaction_value']:,.0f}")
-    profile_cols[2].metric("Average model risk", f"{merchant_profile['predicted_risk']:.1f}%")
-    profile_cols[3].metric("Payment success", f"{merchant_profile['payment_success_rate']:.1f}%")
-    profile_payments = filtered.loc[filtered["merchant_id"] == selected_merchant].sort_values(
-        "timestamp", ascending=False
-    )
+        chart.update_traces(marker_color=ACCENT)
+        style_fig(chart, height=340)
+        chart.update_yaxes(type="category")
+        st.plotly_chart(chart, use_container_width=True, config=PLOT_CONFIG)
+
     with st.container(border=True):
+        panel_header("Merchant deep dive", "Profile, value and transaction history for one merchant", "◎")
+        merchant_ids = merchant_summary.sort_values("predicted_risk", ascending=False)["merchant_id"].tolist()
+        selected_merchant = st.selectbox(
+            "Select merchant", merchant_ids,
+            format_func=lambda merchant: f"Merchant M-{int(merchant):04d}",
+            key="merchant_profile_id",
+        )
+        merchant_profile = merchant_summary.loc[
+            merchant_summary["merchant_id"] == selected_merchant
+        ].iloc[0]
+        kpi_row([
+            ("Transactions", f"{int(merchant_profile['transactions']):,}", None),
+            ("Processed value", f"₹{merchant_profile['transaction_value']:,.0f}", None),
+            ("Average model risk", f"{merchant_profile['predicted_risk']:.1f}%", None),
+            ("Payment success", f"{merchant_profile['payment_success_rate']:.1f}%", None),
+        ], compact=True)
+        risk_meter(float(merchant_profile["predicted_risk"]) / 100)
+        profile_payments = filtered.loc[filtered["merchant_id"] == selected_merchant].sort_values(
+            "timestamp", ascending=False
+        )
         st.markdown("**Merchant transaction history**")
         st.dataframe(
             profile_payments[[
@@ -646,34 +839,36 @@ if page == "Merchant Risk":
                 ),
             },
         )
-        st.caption("The model scores are generated from synthetic transactions and are not independently validated risk assessments.")
+        st.caption("Model scores are generated from synthetic transactions and are not independently validated risk assessments.")
+
     with st.expander("Portfolio exploration charts", expanded=False):
         left, right = st.columns(2)
         with left:
             st.markdown("**Merchants with highest predicted risk**")
             top_risk = merchant_summary.nlargest(12, "predicted_risk")
-            st.plotly_chart(
-                px.bar(top_risk.sort_values("predicted_risk"), x="predicted_risk",
-                       y="merchant_id", orientation="h",
-                       title="Average predicted fraud risk (%)"),
-                use_container_width=True,
-            )
+            risk_chart = px.bar(top_risk.sort_values("predicted_risk"), x="predicted_risk",
+                                y="merchant_id", orientation="h")
+            risk_chart.update_traces(marker_color=PINK)
+            style_fig(risk_chart, height=340)
+            risk_chart.update_yaxes(type="category")
+            st.plotly_chart(risk_chart, use_container_width=True, config=PLOT_CONFIG)
         with right:
             st.markdown("**Merchant value vs. predicted risk**")
-            st.plotly_chart(
-                px.scatter(merchant_summary, x="transaction_value", y="predicted_risk",
-                           size="transactions", hover_name="merchant_id",
-                           title="Merchant portfolio map"),
-                use_container_width=True,
-            )
+            scatter = px.scatter(merchant_summary, x="transaction_value", y="predicted_risk",
+                                 size="transactions", hover_name="merchant_id")
+            scatter.update_traces(marker={"color": ACCENT, "opacity": 0.75, "line": {"width": 0}})
+            style_fig(scatter, height=340)
+            st.plotly_chart(scatter, use_container_width=True, config=PLOT_CONFIG)
         st.markdown("**Merchant scorecard**")
         st.dataframe(
             merchant_summary.sort_values("predicted_risk", ascending=False).head(100).round(2),
             use_container_width=True, hide_index=True,
         )
 
+
+# ---------- Customer Insights ----------
+
 if page == "Customer Insights":
-    st.subheader("Customer Insights")
     customer_summary = filtered.groupby("customer_id").agg(
         transactions=("transaction_id", "count"),
         lifetime_value=("amount", "sum"),
@@ -683,30 +878,56 @@ if page == "Customer Insights":
     ).reset_index()
     customer_summary["success_rate"] *= 100
     customer_summary["predicted_risk"] *= 100
-    left, right = st.columns(2)
+
+    kpi_row([
+        ("Customers in view", f"{len(customer_summary):,}", "Under active filters"),
+        ("Average lifetime value", f"₹{customer_summary['lifetime_value'].mean():,.0f}", "Per customer"),
+        ("Average ticket", f"₹{filtered['amount'].mean():,.0f}", "Per transaction"),
+        ("Repeat customers", f"{(customer_summary['transactions'] > 1).mean():.1%}", "Two or more payments"),
+    ])
+
+    left, right = st.columns(2, gap="medium")
     with left:
-        st.markdown("**Top customers by transaction value**")
-        top_customers = customer_summary.nlargest(12, "lifetime_value")
-        st.plotly_chart(px.bar(top_customers.sort_values("lifetime_value"), x="lifetime_value", y="customer_id", orientation="h", title="Customer transaction value (₹)"), use_container_width=True)
+        with st.container(border=True):
+            panel_header("Top customers", "Twelve highest customers by transaction value", "◔")
+            top_customers = customer_summary.nlargest(12, "lifetime_value")
+            customer_chart = px.bar(top_customers.sort_values("lifetime_value"), x="lifetime_value", y="customer_id", orientation="h")
+            customer_chart.update_traces(marker_color=ACCENT)
+            style_fig(customer_chart, height=360)
+            customer_chart.update_yaxes(type="category")
+            st.plotly_chart(customer_chart, use_container_width=True, config=PLOT_CONFIG)
     with right:
-        st.markdown("**Customer activity segments**")
-        customer_summary["activity_segment"] = pd.cut(customer_summary["transactions"], bins=[0, 1, 3, 10000], labels=["One-time", "Occasional", "Frequent"])
-        segments = customer_summary.groupby("activity_segment", observed=False).size().rename("customers").reset_index()
-        st.plotly_chart(px.pie(segments, names="activity_segment", values="customers", title="Customer segmentation"), use_container_width=True)
-    st.dataframe(customer_summary.sort_values("lifetime_value", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
+        with st.container(border=True):
+            panel_header("Activity segments", "Customers grouped by number of payments", "◫")
+            customer_summary["activity_segment"] = pd.cut(customer_summary["transactions"], bins=[0, 1, 3, 10000], labels=["One-time", "Occasional", "Frequent"])
+            segments = customer_summary.groupby("activity_segment", observed=False).size().rename("customers").reset_index()
+            segment_chart = px.pie(segments, names="activity_segment", values="customers", hole=.68,
+                                   color="activity_segment",
+                                   color_discrete_map={"One-time": "#57565d", "Occasional": "#ff852f", "Frequent": PINK})
+            segment_chart.update_traces(textinfo="percent", textposition="outside")
+            style_fig(segment_chart, height=360, legend=True, axes=False)
+            st.plotly_chart(segment_chart, use_container_width=True, config=PLOT_CONFIG)
+
+    with st.container(border=True):
+        panel_header("Customer table", "Ranked by lifetime transaction value", "≡")
+        st.dataframe(customer_summary.sort_values("lifetime_value", ascending=False).head(100).round(2), use_container_width=True, hide_index=True)
+
+
+# ---------- Transactions ----------
 
 if page == "Transactions":
-    st.subheader("Transaction explorer")
-    search_id = st.text_input("Find a transaction by ID", placeholder="e.g. 1042")
-    if search_id.strip():
-        if search_id.strip().isdigit():
-            filtered = filtered.loc[filtered["transaction_id"] == int(search_id.strip())].copy()
-        else:
-            st.warning("Enter a numeric transaction ID.")
-    st.write(f"Showing {min(500, len(filtered)):,} of {len(filtered):,} filtered transactions.")
-    st.dataframe(filtered.head(500), use_container_width=True, hide_index=True)
-    csv = filtered.to_csv(index=False).encode("utf-8")
-    st.download_button("Download filtered transactions (CSV)", data=csv, file_name="paylens_filtered_transactions.csv", mime="text/csv")
+    with st.container(border=True):
+        panel_header("Find a transaction", "Search by numeric transaction ID within the active filters", "⌕")
+        search_id = st.text_input("Transaction ID", placeholder="e.g. 1042", label_visibility="collapsed")
+        if search_id.strip():
+            if search_id.strip().isdigit():
+                filtered = filtered.loc[filtered["transaction_id"] == int(search_id.strip())].copy()
+            else:
+                st.warning("Enter a numeric transaction ID.")
+        st.caption(f"Showing {min(500, len(filtered)):,} of {len(filtered):,} filtered transactions.")
+        st.dataframe(filtered.head(500), use_container_width=True, hide_index=True)
+        csv = filtered.to_csv(index=False).encode("utf-8")
+        st.download_button("Download filtered transactions (CSV)", data=csv, file_name="paylens_filtered_transactions.csv", mime="text/csv")
 
 st.divider()
 st.caption("PayLens is a student portfolio project using reproducible synthetic data. It is not connected to a bank, payment processor or live fraud system.")
