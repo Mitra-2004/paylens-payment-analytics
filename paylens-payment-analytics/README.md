@@ -91,16 +91,32 @@ streamlit run dashboard/app.py
 
 The dashboard also generates the dataset automatically if `data/payments.csv` is missing.
 
-## Model methodology
+## Model methodology and evaluation
 
-A Random Forest classifier is trained on a stratified train/test split. The synthetic label is generated using a combination of transaction amount, merchant risk score, transaction hour, device type and payment method. The model reports classification metrics on the held-out test set and produces estimated risk scores for the transaction explorer and merchant analysis.
+PayLens uses a **Random Forest classifier** trained on earlier synthetic transactions (first 75% chronologically), with the newest 25% held out for testing. Model features include amount, timestamp-derived hour/weekend indicators, merchant risk attribute, category, region, payment method and device type. Transaction/customer identifiers, the fraud label and payment outcome are excluded as predictor features.
 
-Because the labels and data are simulated, the metrics demonstrate a machine-learning workflow only. They must not be interpreted as evidence of real-world fraud-detection performance.
+The synthetic fraud label is sampled from an engineered process based on amount, merchant risk, night hours, unknown devices and card payments. The timestamp generator now produces hour and weekend fields from the timestamp itself; the dataset is versioned so older inconsistent samples are regenerated.
+
+**Evaluation:** The Fraud Intelligence page shows precision, recall, F1, ROC-AUC, average precision (AP), the fraud-prevalence/random-ranking AP baseline, Brier score and a threshold-adjustable confusion matrix on the chronological holdout. AP is especially useful for these imbalanced synthetic labels. Scores used for older records are marked **in-sample**; newer held-out predictions are marked **out-of-sample**.
+
+For this educational demo, Random Forest class weights are configured as `{0: 1, 1: 5}` rather than fully balancing the classes. The dashboard's illustrative review bands are **Low: under 10%**, **Medium: 10–25%** and **High: over 25%**. The scores have **not been calibrated or externally validated**; the bands are convenience categories, *not* deployable risk policies. Rule-based investigation cues are *not* SHAP values or causal explanations.
+
+**Limitations:** Because the dataset and fraud mechanism are synthetic, good test metrics only demonstrate recovery of engineered patterns. A chronological split reduces one form of evaluation optimism but cannot establish performance on real payment data. The CSV is a simulation, and no fraud-alerting or case-management integration is connected to real institutions.
+
+## Run the dataset integrity tests
+
+From the inner `paylens-payment-analytics/` directory:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+The tests regenerate the deterministic sample, check required columns, transaction IDs, binary fields, timestamp/hour/weekend consistency, dataset version and chronological split boundaries.
 
 ## Future improvements
 
-- Time-based validation to reduce temporal leakage
-- Improve model calibration and cross-validation beyond the existing held-out precision–recall curve and threshold tuning
+- Walk-forward validation on multiple time windows
+- Probability calibration and repeated temporal evaluation beyond the current holdout
 - Explainability with SHAP
 - Merchant network graph and customer–merchant relationship analysis
 - Automated model monitoring and drift checks
