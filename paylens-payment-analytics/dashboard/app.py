@@ -434,8 +434,20 @@ def explain_transaction(row: pd.Series, model, model_columns: list[str]):
 
 
 def navigate_to(destination: str) -> None:
-    """Switch workspace from a button callback before Streamlit redraws widgets."""
+    """Switch workspace before Streamlit redraws widgets."""
     st.session_state["paylens_page"] = destination
+
+
+def open_transaction(transaction_id: int) -> None:
+    """Route into the investigation queue with the requested transaction selected."""
+    st.session_state["pending_transaction_id"] = int(transaction_id)
+    navigate_to("Investigations")
+
+
+def open_merchant(merchant_id: int) -> None:
+    """Route into the merchant profile with the requested merchant selected."""
+    st.session_state["pending_merchant_id"] = int(merchant_id)
+    navigate_to("Merchant Risk")
 
 
 # ---------- Sidebar navigation and filters ----------
@@ -635,9 +647,10 @@ if page == "Overview":
             with footer_left:
                 st.caption("Scores are illustrative and include in-sample model predictions.")
             with footer_right:
+                selected_top_tx = int(recent_queue.iloc[0]["transaction_id"])
                 st.button(
-                    "Open investigations", type="primary",
-                    on_click=navigate_to, args=("Investigations",),
+                    "Investigate top-risk payment", type="primary",
+                    on_click=open_transaction, args=(selected_top_tx,),
                     use_container_width=True,
                 )
 
@@ -693,6 +706,20 @@ if page == "Investigations":
             elif queue_mode == "Recent":
                 queue = filtered.sort_values("timestamp", ascending=False)
             candidate_ids = queue["transaction_id"].head(150).astype(int).tolist()
+            pending_tx = st.session_state.pop("pending_transaction_id", None)
+            if pending_tx is not None:
+                if pending_tx in filtered["transaction_id"].values:
+                    candidate_ids = [pending_tx] + [
+                        value for value in candidate_ids if value != pending_tx
+                    ]
+                    st.session_state["investigation_transaction"] = pending_tx
+                else:
+                    st.info("The linked transaction is outside the current global filters.")
+            if (
+                "investigation_transaction" in st.session_state
+                and st.session_state["investigation_transaction"] not in candidate_ids
+            ):
+                del st.session_state["investigation_transaction"]
             selected_id = st.selectbox(
                 "Select transaction",
                 candidate_ids,
@@ -708,7 +735,7 @@ if page == "Investigations":
                     )
                 },
             )
-            st.caption("Queue shows up to 150 candidate transactions under your current filters.")
+            st.caption("Queue shows up to 150 ranked transactions, plus any payment opened from another workspace.")
 
     selected = filtered.loc[filtered["transaction_id"] == selected_id].iloc[0]
     merchant_history = scored_df.loc[scored_df["merchant_id"] == selected["merchant_id"]]
@@ -1085,6 +1112,17 @@ if page == "Merchant Risk":
     with st.container(border=True):
         panel_header("Merchant deep dive", "Profile, value and transaction history for one merchant", "◎")
         merchant_ids = merchant_summary.sort_values("predicted_risk", ascending=False)["merchant_id"].tolist()
+        pending_merchant = st.session_state.pop("pending_merchant_id", None)
+        if pending_merchant is not None:
+            if pending_merchant in merchant_ids:
+                st.session_state["merchant_profile_id"] = pending_merchant
+            else:
+                st.info("The linked merchant is outside the current global filters.")
+        if (
+            "merchant_profile_id" in st.session_state
+            and st.session_state["merchant_profile_id"] not in merchant_ids
+        ):
+            del st.session_state["merchant_profile_id"]
         selected_merchant = st.selectbox(
             "Select merchant", merchant_ids,
             format_func=lambda merchant: f"Merchant M-{int(merchant):04d}",
@@ -1144,6 +1182,15 @@ if page == "Merchant Risk":
             },
         )
         st.caption("Model scores are generated from synthetic transactions and are not independently validated risk assessments.")
+        if not profile_payments.empty:
+            tx_to_review = int(profile_payments.sort_values(
+                "predicted_fraud_risk", ascending=False
+            ).iloc[0]["transaction_id"])
+            st.button(
+                "Investigate this merchant's highest-risk payment",
+                on_click=open_transaction, args=(tx_to_review,),
+                use_container_width=True,
+            )
 
     with st.expander("Portfolio exploration charts", expanded=False):
         left, right = st.columns(2)
@@ -1225,6 +1272,10 @@ if page == "Network Intelligence":
             "Select a merchant", available_merchants,
             format_func=lambda mid: f"Merchant M-{int(mid):04d}",
             key="network_merchant",
+        )
+        st.button(
+            "Open merchant risk profile",
+            on_click=open_merchant, args=(int(focus_merchant),),
         )
         overlap = merchant_customer_overlap(filtered, focus_merchant)
         if overlap.empty:
@@ -1355,6 +1406,17 @@ if page == "Transactions":
             st.dataframe(
                 transaction_view.iloc[start_row:stop_row],
                 hide_index=True, use_container_width=True,
+            )
+            selected_tx_for_review = st.selectbox(
+                "Open transaction in Investigations",
+                transaction_view.iloc[start_row:stop_row]["transaction_id"].astype(int).tolist(),
+                format_func=lambda tx: f"TX-{tx:06d}",
+                key=f"explorer_drilldown_{sort_mode}_{page_number}_{page_size}",
+            )
+            st.button(
+                "Investigate selected transaction",
+                on_click=open_transaction, args=(int(selected_tx_for_review),),
+                use_container_width=True,
             )
             st.download_button(
                 "Download all matching transactions (CSV)",
