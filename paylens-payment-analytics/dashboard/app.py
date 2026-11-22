@@ -164,7 +164,7 @@ df = load_data(str(DATA_FILE), file_modified)
 scored_df, model_metrics, feature_importance = train_fraud_model(df)
 
 with st.sidebar:
-    st.markdown("### <span style=\\"color:#ff762f\\">◈</span> PayLens", unsafe_allow_html=True)
+    st.markdown('### <span style="color:#ff762f">◈</span> PayLens', unsafe_allow_html=True)
     st.caption("INTELLIGENCE WORKSPACE")
     st.divider()
     st.markdown("##### WORKSPACE")
