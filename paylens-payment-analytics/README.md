@@ -155,3 +155,6 @@ The Streamlit app checks its CSV at startup and regenerates the reproducible syn
 - Merchant network graph and customer–merchant relationship analysis
 - Automated model monitoring and drift checks
 - Expand existing dataset smoke tests and publish a data dictionary
+
+
+[Portfolio case study · PayLens](https://vedkhairnar.vercel.app/projects/paylens/)
