@@ -8,7 +8,7 @@
 
 **What this demonstrates:** translating business questions into interactive KPI reporting, building an end-to-end Python/Scikit-learn workflow, designing investigation drill-downs, and communicating limitations clearly.
 
-**Important:** The project uses approximately 25,000 reproducible **synthetic transactions**, including simulated fraud labels. It is not connected to real payment services. Risk scores on transaction and merchant screens include predictions on the training dataset, so they must not be taken as independent or production-ready fraud assessments. Model metrics in the Fraud Intelligence workspace are calculated on a held-out stratified test set.
+**Important:** The project uses approximately 25,000 reproducible **synthetic transactions**, including simulated fraud labels. It is not connected to real payment services. Risk scores on transaction and merchant screens include predictions on the training dataset, so they must not be taken as independent or production-ready fraud assessments. Model metrics in the Fraud Intelligence workspace are calculated on a held-out chronological test set (newest 25% of transactions, ordered by timestamp and transaction ID).
 
 ---
 
